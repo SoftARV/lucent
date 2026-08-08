@@ -1,0 +1,5 @@
+namespace Lucent.Config {
+    public const string APP_ID = "@APP_ID@";
+    public const string APP_PATH = "@APP_PATH@";
+    public const string VERSION = "@VERSION@";
+}

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>dev.miguel.Lucent</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <name>Lucent</name>
+  <summary>Control your Razer keyboard lighting</summary>
+
+  <description>
+    <p>
+      A small, fast GTK4 front end for OpenRazer. Set the brightness and
+      lighting effect of your Razer keyboard without leaving the keyboard.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">dev.miguel.Lucent.desktop</launchable>
+
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+
+  <categories>
+    <category>Utility</category>
+    <category>Settings</category>
+  </categories>
+
+  <releases>
+    <release version="0.1.0" date="2026-08-08"/>
+  </releases>
+</component>

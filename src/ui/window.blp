@@ -1,0 +1,87 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $LucentWindow : Adw.ApplicationWindow {
+  title: "Lucent";
+  default-width: 420;
+  default-height: 600;
+  width-request: 360;
+  height-request: 400;
+
+  content: Adw.ToastOverlay toasts {
+    child: Adw.ToolbarView {
+      [top]
+      Adw.HeaderBar {}
+
+      content: Adw.PreferencesPage {
+        Adw.PreferencesGroup {
+          Adw.ActionRow {
+            title: "Brightness";
+
+            [suffix]
+            Scale brightness {
+              hexpand: true;
+              width-request: 200;
+              draw-value: false;
+              valign: center;
+
+              adjustment: Adjustment {
+                lower: 0;
+                upper: 100;
+                step-increment: 5;
+                page-increment: 10;
+              };
+            }
+          }
+
+          Adw.SwitchRow logo_row {
+            title: "Lid Logo";
+            visible: false;
+          }
+        }
+
+        Adw.PreferencesGroup {
+          title: "Effect";
+
+          FlowBox effects {
+            selection-mode: none;
+            homogeneous: true;
+            min-children-per-line: 2;
+            max-children-per-line: 4;
+            row-spacing: 6;
+            column-spacing: 6;
+          }
+        }
+
+        Adw.PreferencesGroup color_group {
+          visible: false;
+
+          Adw.ActionRow {
+            title: "Color";
+
+            [suffix]
+            ColorDialogButton color {
+              valign: center;
+
+              dialog: ColorDialog {
+                with-alpha: false;
+              };
+            }
+          }
+        }
+
+        Adw.PreferencesGroup direction_group {
+          visible: false;
+
+          Adw.ComboRow direction {
+            title: "Direction";
+
+            model: StringList {
+              strings ["Right", "Left"]
+            };
+          }
+        }
+      };
+    };
+  };
+}

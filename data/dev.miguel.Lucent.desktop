@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Lucent
+Comment=Control your Razer keyboard lighting
+Exec=lucent
+Icon=dev.miguel.Lucent
+Terminal=false
+Type=Application
+Categories=Utility;Settings;GTK;
+Keywords=razer;keyboard;lighting;rgb;chroma;backlight;openrazer;
+StartupNotify=true

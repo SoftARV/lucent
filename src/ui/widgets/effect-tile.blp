@@ -1,0 +1,22 @@
+using Gtk 4.0;
+
+template $LucentEffectTile : ToggleButton {
+  child: Box {
+    orientation: vertical;
+    spacing: 6;
+    margin-top: 10;
+    margin-bottom: 10;
+
+    Image {
+      icon-name: bind template.icon;
+      pixel-size: 22;
+    }
+
+    Label {
+      label: bind template.title;
+      ellipsize: end;
+
+      styles ["caption"]
+    }
+  };
+}

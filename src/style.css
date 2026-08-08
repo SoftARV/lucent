@@ -1,0 +1,14 @@
+:root {
+  --accent-bg-color: #44d62c;
+  --accent-fg-color: #06230b;
+  --accent-color: #2fa81c;
+}
+
+.effect-tile:checked {
+  background-color: var(--accent-bg-color);
+  color: var(--accent-fg-color);
+}
+
+.effect-tile:checked:hover {
+  background-color: #4fe038;
+}

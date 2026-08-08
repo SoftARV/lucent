@@ -1,4 +1,4 @@
-[GtkTemplate (ui = "/dev/miguel/Lucent/ui/widgets/effect-tile.ui")]
+[GtkTemplate (ui = "/dev/miguel/Lucent/effect-tile.ui")]
 public class Lucent.EffectTile : Gtk.ToggleButton {
 
     public Effect effect { get; construct; }

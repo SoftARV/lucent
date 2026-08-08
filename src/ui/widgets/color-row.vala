@@ -1,4 +1,4 @@
-[GtkTemplate (ui = "/dev/miguel/Lucent/ui/widgets/color-row.ui")]
+[GtkTemplate (ui = "/dev/miguel/Lucent/color-row.ui")]
 public class Lucent.ColorRow : Adw.ActionRow {
 
     [GtkChild] private unowned Gtk.ColorDialogButton button;

@@ -1,4 +1,4 @@
-[GtkTemplate (ui = "/dev/miguel/Lucent/ui/window.ui")]
+[GtkTemplate (ui = "/dev/miguel/Lucent/window.ui")]
 public class Lucent.Window : Adw.ApplicationWindow {
 
     [GtkChild] private unowned Adw.ToastOverlay toasts;

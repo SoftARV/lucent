@@ -11,7 +11,15 @@ template $LucentWindow : Adw.ApplicationWindow {
   content: Adw.ToastOverlay toasts {
     child: Adw.ToolbarView {
       [top]
-      Adw.HeaderBar {}
+      Adw.HeaderBar {
+        [end]
+        MenuButton {
+          icon-name: "open-menu-symbolic";
+          menu-model: primary_menu;
+          primary: true;
+          tooltip-text: "Main Menu";
+        }
+      }
 
       content: Adw.PreferencesPage {
         Adw.PreferencesGroup {
@@ -117,4 +125,18 @@ template $LucentWindow : Adw.ApplicationWindow {
       };
     };
   };
+}
+
+menu primary_menu {
+  section {
+    item {
+      label: "About Lucent";
+      action: "app.about";
+    }
+
+    item {
+      label: "Quit";
+      action: "app.quit";
+    }
+  }
 }

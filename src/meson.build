@@ -9,21 +9,26 @@ config_vala = configure_file(
   configuration: conf,
 )
 
-blueprints = custom_target('blueprints',
-  input: files(
-    'ui/window.blp',
-    'ui/widgets/effect-tile.blp',
-    'ui/widgets/color-row.blp',
-  ),
-  output: '.',
-  command: [
-    find_program('blueprint-compiler'),
-    'batch-compile',
-    '@OUTPUT@',
-    '@CURRENT_SOURCE_DIR@',
-    '@INPUT@',
-  ],
-)
+blueprint_compiler = find_program('blueprint-compiler')
+
+# One target per file with an explicit output. A single batch-compile target
+# writing into a directory ('output: .') is not tracked reliably: other build
+# steps touch that directory, so ninja sees the output as newer than the input
+# and silently skips regenerating the .ui files.
+blueprint_files = {
+  'window.ui': 'ui/window.blp',
+  'effect-tile.ui': 'ui/widgets/effect-tile.blp',
+  'color-row.ui': 'ui/widgets/color-row.blp',
+}
+
+blueprints = []
+foreach output_name, source_name : blueprint_files
+  blueprints += custom_target(output_name,
+    input: files(source_name),
+    output: output_name,
+    command: [blueprint_compiler, 'compile', '--output', '@OUTPUT@', '@INPUT@'],
+  )
+endforeach
 
 resources = gnome.compile_resources('lucent-resources',
   'lucent.gresource.xml',

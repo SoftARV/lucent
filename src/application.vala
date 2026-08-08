@@ -15,6 +15,35 @@ public class Lucent.Application : Adw.Application {
             provider,
             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
         );
+
+        var about_action = new SimpleAction ("about", null);
+        about_action.activate.connect ((parameter) => {
+            show_about ();
+        });
+        add_action (about_action);
+
+        var quit_action = new SimpleAction ("quit", null);
+        quit_action.activate.connect ((parameter) => {
+            quit ();
+        });
+        add_action (quit_action);
+
+        set_accels_for_action ("app.about", { "F1" });
+        set_accels_for_action ("app.quit", { "<Control>q" });
+    }
+
+    private void show_about () {
+        new Adw.AboutDialog () {
+            application_name = "Lucent",
+            application_icon = Config.APP_ID,
+            version = Config.VERSION,
+            developer_name = "Miguel Rincon",
+            comments = "Control your Razer keyboard lighting.",
+            website = "https://github.com/SoftARV/lucent",
+            issue_url = "https://github.com/SoftARV/lucent/issues",
+            license_type = Gtk.License.GPL_3_0,
+            copyright = "© 2026 Miguel Rincon",
+        }.present (active_window);
     }
 
     protected override void activate () {

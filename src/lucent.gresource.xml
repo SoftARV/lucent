@@ -2,8 +2,9 @@
 <gresources>
   <gresource prefix="/dev/miguel/Lucent">
     <file>style.css</file>
-    <file preprocess="xml-stripblanks">ui/window.ui</file>
-    <file preprocess="xml-stripblanks">ui/widgets/effect-tile.ui</file>
-    <file preprocess="xml-stripblanks">ui/widgets/color-row.ui</file>
+    <file alias="icons/scalable/apps/dev.miguel.Lucent.svg">../data/icons/hicolor/scalable/apps/dev.miguel.Lucent.svg</file>
+    <file preprocess="xml-stripblanks">window.ui</file>
+    <file preprocess="xml-stripblanks">effect-tile.ui</file>
+    <file preprocess="xml-stripblanks">color-row.ui</file>
   </gresource>
 </gresources>

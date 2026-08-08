@@ -4,6 +4,8 @@
     <file>style.css</file>
     <file alias="icons/scalable/apps/dev.miguel.Lucent.svg">../data/icons/hicolor/scalable/apps/dev.miguel.Lucent.svg</file>
     <file alias="icons/symbolic/apps/dev.miguel.Lucent-symbolic.svg">../data/icons/hicolor/symbolic/apps/dev.miguel.Lucent-symbolic.svg</file>
+    <file alias="icons/scalable/actions/blend-tool-symbolic.svg">../data/icons/hicolor/scalable/actions/blend-tool-symbolic.svg</file>
+    <file alias="icons/scalable/actions/turn-off-symbolic.svg">../data/icons/hicolor/scalable/actions/turn-off-symbolic.svg</file>
     <file preprocess="xml-stripblanks">window.ui</file>
     <file preprocess="xml-stripblanks">effect-tile.ui</file>
     <file preprocess="xml-stripblanks">color-row.ui</file>

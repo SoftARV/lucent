@@ -43,12 +43,12 @@ namespace Lucent {
             switch (this) {
                 case STATIC:    return "color-select-symbolic";
                 case SPECTRUM:  return "preferences-desktop-appearance-symbolic";
-                case WAVE:      return "media-playlist-repeat-symbolic";
+                case WAVE:      return "blend-tool-symbolic";
                 case REACTIVE:  return "input-keyboard-symbolic";
                 case BREATH:    return "display-brightness-symbolic";
                 case STARLIGHT: return "starred-symbolic";
                 case RIPPLE:    return "network-wireless-symbolic";
-                default:        return "weather-clear-night-symbolic";
+                default:        return "turn-off-symbolic";
             }
         }
 

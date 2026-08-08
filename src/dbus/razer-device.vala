@@ -41,8 +41,8 @@ public class Lucent.RazerDevice : Object {
         return bright.get_brightness ();
     }
 
-    public void write_brightness (double value) throws Error {
-        bright.set_brightness (value);
+    public async void write_brightness (double value) throws Error {
+        yield bright.set_brightness (value);
     }
 
     public void read_effect (out Effect effect, out Mode mode) throws Error {
@@ -74,65 +74,65 @@ public class Lucent.RazerDevice : Object {
         return has_logo ? logo.get_logo_active () : false;
     }
 
-    public void write_logo_active (bool active) throws Error {
+    public async void write_logo_active (bool active) throws Error {
         if (has_logo) {
-            logo.set_logo_active (active);
+            yield logo.set_logo_active (active);
         }
     }
 
-    public void apply (Effect effect, Mode mode, Gdk.RGBA first, Gdk.RGBA second,
-                       int speed, int32 direction) throws Error {
+    public async void apply (Effect effect, Mode mode, Gdk.RGBA first, Gdk.RGBA second,
+                             int speed, int32 direction) throws Error {
         uint8 r1 = byte_of (first.red), g1 = byte_of (first.green), b1 = byte_of (first.blue);
         uint8 r2 = byte_of (second.red), g2 = byte_of (second.green), b2 = byte_of (second.blue);
         uint8 s = (uint8) speed;
 
         switch (effect) {
             case Effect.STATIC:
-                chroma.set_static (r1, g1, b1);
+                yield chroma.set_static (r1, g1, b1);
                 break;
 
             case Effect.SPECTRUM:
-                chroma.set_spectrum ();
+                yield chroma.set_spectrum ();
                 break;
 
             case Effect.WAVE:
-                chroma.set_wave (direction);
+                yield chroma.set_wave (direction);
                 break;
 
             case Effect.REACTIVE:
-                chroma.set_reactive (r1, g1, b1, s);
+                yield chroma.set_reactive (r1, g1, b1, s);
                 break;
 
             case Effect.BREATH:
                 if (mode == Mode.RANDOM) {
-                    chroma.set_breath_random ();
+                    yield chroma.set_breath_random ();
                 } else if (mode == Mode.DUAL) {
-                    chroma.set_breath_dual (r1, g1, b1, r2, g2, b2);
+                    yield chroma.set_breath_dual (r1, g1, b1, r2, g2, b2);
                 } else {
-                    chroma.set_breath_single (r1, g1, b1);
+                    yield chroma.set_breath_single (r1, g1, b1);
                 }
                 break;
 
             case Effect.STARLIGHT:
                 if (mode == Mode.RANDOM) {
-                    chroma.set_starlight_random (s);
+                    yield chroma.set_starlight_random (s);
                 } else if (mode == Mode.DUAL) {
-                    chroma.set_starlight_dual (r1, g1, b1, r2, g2, b2, s);
+                    yield chroma.set_starlight_dual (r1, g1, b1, r2, g2, b2, s);
                 } else {
-                    chroma.set_starlight_single (r1, g1, b1, s);
+                    yield chroma.set_starlight_single (r1, g1, b1, s);
                 }
                 break;
 
             case Effect.RIPPLE:
                 if (mode == Mode.RANDOM) {
-                    custom.set_ripple_random (RIPPLE_REFRESH);
+                    yield custom.set_ripple_random (RIPPLE_REFRESH);
                 } else {
-                    custom.set_ripple (r1, g1, b1, RIPPLE_REFRESH);
+                    yield custom.set_ripple (r1, g1, b1, RIPPLE_REFRESH);
                 }
                 break;
 
             default:
-                chroma.set_none ();
+                yield chroma.set_none ();
                 break;
         }
     }

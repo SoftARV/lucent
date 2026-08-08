@@ -1,0 +1,13 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $LucentColorRow : Adw.ActionRow {
+  [suffix]
+  ColorDialogButton button {
+    valign: center;
+
+    dialog: ColorDialog {
+      with-alpha: false;
+    };
+  }
+}

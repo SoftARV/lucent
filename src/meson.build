@@ -13,6 +13,7 @@ blueprints = custom_target('blueprints',
   input: files(
     'ui/window.blp',
     'ui/widgets/effect-tile.blp',
+    'ui/widgets/color-row.blp',
   ),
   output: '.',
   command: [
@@ -39,6 +40,7 @@ sources = files(
   'model/effect.vala',
   'ui/window.vala',
   'ui/widgets/effect-tile.vala',
+  'ui/widgets/color-row.vala',
 )
 
 executable('lucent',

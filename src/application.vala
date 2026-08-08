@@ -5,6 +5,18 @@ public class Lucent.Application : Adw.Application {
                 flags: ApplicationFlags.DEFAULT_FLAGS);
     }
 
+    protected override void startup () {
+        base.startup ();
+
+        var provider = new Gtk.CssProvider ();
+        provider.load_from_resource (Config.APP_PATH + "/style.css");
+        Gtk.StyleContext.add_provider_for_display (
+            Gdk.Display.get_default (),
+            provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        );
+    }
+
     protected override void activate () {
         if (active_window != null) {
             active_window.present ();

@@ -3,6 +3,8 @@ public class Lucent.Window : Adw.ApplicationWindow {
 
     [GtkChild] private unowned Adw.ToastOverlay toasts;
     [GtkChild] private unowned Gtk.Scale brightness;
+    [GtkChild] private unowned Gtk.Label brightness_value;
+    [GtkChild] private unowned Gtk.Box quick;
     [GtkChild] private unowned Adw.SwitchRow logo_row;
     [GtkChild] private unowned Gtk.FlowBox effects;
     [GtkChild] private unowned Adw.PreferencesGroup options;
@@ -27,8 +29,28 @@ public class Lucent.Window : Adw.ApplicationWindow {
         this.title = device.name;
 
         build_tiles ();
+        build_quick_levels ();
         load_state ();
         connect_signals ();
+    }
+
+    private const int[] QUICK_LEVELS = { 0, 25, 50, 75, 100 };
+
+    private void build_quick_levels () {
+        var action = new SimpleAction ("set-brightness", VariantType.INT32);
+        action.activate.connect ((parameter) => {
+            if (parameter != null) {
+                brightness.set_value ((double) parameter.get_int32 ());
+            }
+        });
+        add_action (action);
+
+        foreach (var level in QUICK_LEVELS) {
+            var button = new Gtk.Button.with_label ("%d%%".printf (level));
+            button.set_action_name ("win.set-brightness");
+            button.set_action_target_value (new Variant.int32 (level));
+            quick.append (button);
+        }
     }
 
     public override void dispose () {
@@ -66,6 +88,7 @@ public class Lucent.Window : Adw.ApplicationWindow {
 
         try {
             brightness.set_value (device.read_brightness ());
+            show_brightness ();
             device.read_effect (out current, out mode);
             primary_row.set_rgba (device.read_color (0));
             secondary_row.set_rgba (device.read_color (1));
@@ -94,6 +117,8 @@ public class Lucent.Window : Adw.ApplicationWindow {
 
     private void connect_signals () {
         brightness.value_changed.connect (() => {
+            show_brightness ();
+
             if (syncing) {
                 return;
             }
@@ -245,6 +270,10 @@ public class Lucent.Window : Adw.ApplicationWindow {
         } catch (Error e) {
             toast (e.message);
         }
+    }
+
+    private void show_brightness () {
+        brightness_value.label = "%.0f%%".printf (brightness.get_value ());
     }
 
     private void toast (string message) {

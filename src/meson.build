@@ -27,7 +27,7 @@ blueprints = custom_target('blueprints',
 
 resources = gnome.compile_resources('lucent-resources',
   'lucent.gresource.xml',
-  source_dir: meson.current_build_dir(),
+  source_dir: [meson.current_build_dir(), meson.current_source_dir()],
   dependencies: blueprints,
 )
 

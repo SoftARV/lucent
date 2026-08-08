@@ -15,23 +15,52 @@ template $LucentWindow : Adw.ApplicationWindow {
 
       content: Adw.PreferencesPage {
         Adw.PreferencesGroup {
-          Adw.ActionRow {
-            title: "Brightness";
+          Adw.PreferencesRow {
+            activatable: false;
 
-            [suffix]
-            Scale brightness {
-              hexpand: true;
-              width-request: 200;
-              draw-value: false;
-              valign: center;
+            child: Box {
+              orientation: vertical;
+              spacing: 10;
+              margin-top: 14;
+              margin-bottom: 14;
+              margin-start: 14;
+              margin-end: 14;
 
-              adjustment: Adjustment {
-                lower: 0;
-                upper: 100;
-                step-increment: 5;
-                page-increment: 10;
-              };
-            }
+              Box {
+                spacing: 12;
+
+                Label {
+                  label: "Brightness";
+                  hexpand: true;
+                  xalign: 0;
+                }
+
+                Label brightness_value {
+                  width-chars: 4;
+                  xalign: 1;
+
+                  styles ["numeric", "dim-label"]
+                }
+              }
+
+              Scale brightness {
+                hexpand: true;
+                draw-value: false;
+
+                adjustment: Adjustment {
+                  lower: 0;
+                  upper: 100;
+                  step-increment: 5;
+                  page-increment: 10;
+                };
+              }
+
+              Box quick {
+                homogeneous: true;
+
+                styles ["linked"]
+              }
+            };
           }
 
           Adw.SwitchRow logo_row {

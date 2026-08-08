@@ -1,29 +1,22 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <title>Lucent</title>
   <defs>
-    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#62a0ea"/>
-      <stop offset="0.5" stop-color="#9141ac"/>
-      <stop offset="1" stop-color="#e01b24"/>
-    </linearGradient>
-    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#3d3846"/>
-      <stop offset="1" stop-color="#241f31"/>
+    <linearGradient id="lucent-legend" x1="0" y1="36" x2="0" y2="92" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#62A0EA"/>
+      <stop offset="0.5" stop-color="#9141AC"/>
+      <stop offset="1" stop-color="#E01B24"/>
     </linearGradient>
   </defs>
 
-  <rect x="8" y="24" width="112" height="80" rx="16" fill="url(#body)"/>
-  <rect x="8" y="24" width="112" height="80" rx="16" fill="none" stroke="#000" stroke-opacity="0.35" stroke-width="2"/>
+  <g id="keycap">
+    <rect x="22" y="24" width="84" height="84" rx="12" ry="12" fill="#000000"/>
+    <rect x="22" y="24" width="84" height="80" rx="12" ry="12" fill="#241F31"/>
+    <rect x="22" y="24" width="84" height="80" rx="12" ry="12" fill="none" stroke="#000000" stroke-opacity="0.35" stroke-width="2"/>
+  </g>
 
-  <g fill="url(#glow)">
-    <rect x="24" y="42" width="16" height="14" rx="4"/>
-    <rect x="46" y="42" width="16" height="14" rx="4"/>
-    <rect x="68" y="42" width="16" height="14" rx="4"/>
-    <rect x="90" y="42" width="16" height="14" rx="4"/>
-    <rect x="24" y="62" width="16" height="14" rx="4"/>
-    <rect x="46" y="62" width="16" height="14" rx="4"/>
-    <rect x="68" y="62" width="16" height="14" rx="4"/>
-    <rect x="90" y="62" width="16" height="14" rx="4"/>
-    <rect x="24" y="82" width="82" height="14" rx="6"/>
+  <g id="legend" fill="url(#lucent-legend)">
+    <rect x="44" y="36" width="10" height="56"/>
+    <rect x="44" y="82" width="40" height="10"/>
   </g>
 </svg>

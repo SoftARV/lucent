@@ -19,6 +19,7 @@ public class Lucent.Window : Adw.ApplicationWindow {
     private Mode mode = Mode.SINGLE;
     private EffectTile[] tiles = {};
     private bool syncing = false;
+    private bool closing = false;
     private uint brightness_debounce = 0;
     private uint apply_debounce = 0;
 
@@ -54,6 +55,10 @@ public class Lucent.Window : Adw.ApplicationWindow {
     }
 
     public override void dispose () {
+        // In-flight D-Bus replies land after the template children are gone,
+        // so callbacks must not touch widgets once this is set.
+        closing = true;
+
         if (brightness_debounce != 0) {
             Source.remove (brightness_debounce);
             brightness_debounce = 0;
@@ -127,11 +132,13 @@ public class Lucent.Window : Adw.ApplicationWindow {
             }
             brightness_debounce = Timeout.add (60, () => {
                 brightness_debounce = 0;
-                try {
-                    device.write_brightness (brightness.get_value ());
-                } catch (Error e) {
-                    toast (e.message);
-                }
+                device.write_brightness.begin (brightness.get_value (), (obj, res) => {
+                    try {
+                        device.write_brightness.end (res);
+                    } catch (Error e) {
+                        report (e);
+                    }
+                });
                 return Source.REMOVE;
             });
         });
@@ -140,11 +147,13 @@ public class Lucent.Window : Adw.ApplicationWindow {
             if (syncing) {
                 return;
             }
-            try {
-                device.write_logo_active (logo_row.active);
-            } catch (Error e) {
-                toast (e.message);
-            }
+            device.write_logo_active.begin (logo_row.active, (obj, res) => {
+                try {
+                    device.write_logo_active.end (res);
+                } catch (Error e) {
+                    report (e);
+                }
+            });
         });
 
         mode_row.notify["selected"].connect (() => {
@@ -262,12 +271,21 @@ public class Lucent.Window : Adw.ApplicationWindow {
     private void send () {
         var speed = speed_row.visible ? (int) speed_row.selected + 1 : 1;
 
-        try {
-            device.apply (current, mode,
-                          primary_row.get_rgba (), secondary_row.get_rgba (),
-                          speed,
-                          direction_row.selected == 1 ? 2 : 1);
-        } catch (Error e) {
+        device.apply.begin (current, mode,
+                            primary_row.get_rgba (), secondary_row.get_rgba (),
+                            speed,
+                            direction_row.selected == 1 ? 2 : 1,
+                            (obj, res) => {
+            try {
+                device.apply.end (res);
+            } catch (Error e) {
+                report (e);
+            }
+        });
+    }
+
+    private void report (Error e) {
+        if (!closing) {
             toast (e.message);
         }
     }

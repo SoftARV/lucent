@@ -63,6 +63,93 @@ Any value that *does* revert names exactly which hook is required, and for
 which setting. They can differ: BHO is a BIOS-level setting and is the more
 likely of the two to persist.
 
+## Constraint tests: does boost or manual fan depend on the power mode?
+
+Two claims from the reference projects, neither verified on this model, and
+they cannot both be right:
+
+- rcr implies **boost only takes effect in Custom** (mode 4)
+- razer-ctl refuses **manual fan unless the mode is Balanced** (mode 0)
+
+These decide the UI. If manual fan is Balanced-only, the control has to be
+disabled elsewhere with an explanation rather than offered as a free slider.
+
+**What these tests can and cannot show.** They measure whether the register
+holds the value you wrote, which is falsifiable and quick. They do *not* show
+whether it has any effect on power limits — that needs sustained load and a
+power measurement. For the fan there is a better signal: no tachometer exists,
+so if the fans do not audibly change, the write did nothing regardless of what
+reads back.
+
+### Boost
+
+```sh
+python3 razer_set_mode.py 3      # Silent
+python3 razer_set_boost.py cpu 2 # note STUCK / DID NOT STICK
+python3 razer_set_mode.py 4      # Custom
+python3 razer_set_boost.py cpu 3 # note again
+python3 razer_set_mode.py 2      # restore Creator
+```
+
+### Fan
+
+Use **5600**, the maximum. Not 4000: a mid-range value is audible either way
+and cannot be told apart from the normal curve by ear, which is how the first
+run of this test produced an unusable answer. The maximum is also the safest
+possible setpoint, since more cooling is never a thermal risk.
+
+Judge it by A/B, not by absolute impression. Run auto, listen, then manual,
+listen. The difference at 5600 is unmistakable.
+
+```sh
+python3 razer_set_mode.py 3      # Silent
+python3 razer_set_fan.py auto    # listen: this is the baseline
+python3 razer_set_fan.py 5600    # listen: unmistakable, or nothing happened
+python3 razer_set_fan.py auto
+
+python3 razer_set_mode.py 4      # Custom -- the likeliest candidate
+python3 razer_set_fan.py 5600    # listen
+python3 razer_set_fan.py auto
+python3 razer_set_mode.py 2      # restore Creator
+```
+
+Leave the fans on auto when finished. A manual setpoint is not raised by the
+EC when the machine heats up.
+
+### Constraint results, Blade 14 2025
+
+**Manual fan works, with no mode gating.** Confirmed by ear, A/B against auto,
+in Creator and Silent, on both AC and battery. razer-ctl's rule that manual
+fan requires Balanced does **not** apply to this model; rcr's "any mode" is
+correct here. Do not copy razer-ctl's restriction.
+
+At 5600 the change is clearly audible but far from a gaming roar -- expect a
+whoosh, not a jet. Without a tachometer this only shows the fan responds to
+the setpoint, not that it reaches the number written.
+
+**Boost is unresolved and this method cannot resolve it.** The register holds
+the written value in Silent *and* in Custom, so the read-back cannot tell the
+two apart. Whether Custom is the only mode that acts on it needs sustained
+load and a power measurement, not a register probe. Until that exists, treat
+"boost applies only in Custom" as rcr's claim rather than a measured fact.
+
+**Manual fan does not survive suspend, and neither does boost.** Measured
+across a real suspend: both zones came back on `auto`, and CPU boost fell from
+3 (Boost) to 1 (Medium). The manual flag shares a register with the power
+mode, which is already known to revert, so this follows.
+
+Treat that as a safety net rather than a bug to fix. A manual fan speed the
+firmware forgets is one the user cannot leave dangerously low by accident, so
+Lucent should not reapply it on resume. Boost is the opposite: if it is ever
+exposed, it needs restoring like the power mode or it silently evaporates.
+
+**Anomaly worth chasing before the fan readout is designed.** After that
+resume, `CPU.rpm` read 4200 -- a value never written by us, while `GPU.rpm`
+still held our stale 5600. If the CPU zone's setpoint register tracks the EC's
+live target while on auto, it is a real readout rather than dead storage.
+Test by taking several snapshots a minute apart on auto and watching whether
+it moves by itself.
+
 ## Safety notes
 
 - `razer_set_mode.py` accepts modes 0-3 only. Mode 4 (Custom) is refused

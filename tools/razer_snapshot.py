@@ -182,9 +182,17 @@ def main():
     stamp = time.strftime("%Y-%m-%d %H:%M:%S")
     line = (f"{stamp} label={args.label or '-'} ac={ac} bat={cap}% "
             f"uptime={uptime / 60:.1f}m {record}\n")
-    with open(args.log, "a") as f:
-        f.write(line)
-    print(f"\nlogged to {args.log}")
+
+    # The readings above are the point; losing the log is not worth throwing
+    # them away. Early runs of this script needed sudo, so the log can be
+    # left root-owned and unwritable afterwards.
+    try:
+        with open(args.log, "a") as f:
+            f.write(line)
+        print(f"\nlogged to {args.log}")
+    except OSError as e:
+        print(f"\nnot logged: {e}")
+        print(f"  fix with: sudo rm {args.log}")
 
 
 if __name__ == "__main__":

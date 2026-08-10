@@ -1,20 +1,24 @@
 #!/usr/bin/env python3
 """Set the Razer Blade EC power mode. Power mode ONLY.
 
-Deliberately narrow: modes 0-3 only, and the per-zone manual-fan flag is read
-back and preserved verbatim, so this can never move the fans off auto. Mode 4
-(Custom) is refused because it engages the CPU/GPU boost registers, which this
-test does not need.
+The per-zone manual-fan flag is read back and preserved verbatim, so this can
+never move the fans off auto on its own -- use razer_set_fan.py for that.
 
-    sudo python3 razer_set_mode.py 1     # Gaming
-    sudo python3 razer_set_mode.py 2     # back to Creator
+    python3 razer_set_mode.py 1     # Gaming
+    python3 razer_set_mode.py 4     # Custom
+    python3 razer_set_mode.py 2     # back to Creator
+
+Mode 4 (Custom) is the mode the boost registers are said to apply in, and is
+the likeliest candidate for manual fan control too, since that is what
+"Custom" would mean. Selecting it is not itself dangerous: it changes which
+registers the EC honours, not the fan curve.
 """
 import argparse
 import sys
 
 from razer_snapshot import POWER_MODES, ZONES, Blade, find_device
 
-SAFE_MODES = {0, 1, 2, 3}
+SAFE_MODES = {0, 1, 2, 3, 4}
 
 
 def set_power_mode(dev: Blade, zone: int, mode: int, manual_flag: int) -> bool:

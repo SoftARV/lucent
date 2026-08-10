@@ -24,16 +24,63 @@ template $LucentPerformancePage : Adw.PreferencesPage {
     }
   }
 
+  Adw.PreferencesGroup fans {
+    title: "Fan";
+    description: "A manual speed is a temporary override. The firmware returns to its automatic curve after suspend, and Lucent never puts it back — so it cannot be left low by accident.";
+
+    Adw.SwitchRow fan_manual_row {
+      title: "Manual Fan Speed";
+    }
+
+    Adw.PreferencesRow fan_speed_row {
+      activatable: false;
+      sensitive: false;
+
+      child: Box {
+        orientation: vertical;
+        spacing: 10;
+        margin-top: 14;
+        margin-bottom: 14;
+        margin-start: 14;
+        margin-end: 14;
+
+        Box {
+          spacing: 12;
+
+          Label {
+            label: "Speed";
+            hexpand: true;
+            xalign: 0;
+          }
+
+          Label fan_value {
+            width-chars: 10;
+            xalign: 1;
+
+            styles ["numeric", "dim-label"]
+          }
+        }
+
+        Scale fan_speed {
+          hexpand: true;
+          draw-value: false;
+
+          adjustment: Adjustment {
+            lower: 2200;
+            upper: 5600;
+            step-increment: 100;
+            page-increment: 400;
+          };
+        }
+      };
+    }
+  }
+
   Adw.PreferencesGroup live {
     title: "Right Now";
 
     Adw.ActionRow mode_row {
       title: "Mode";
-      subtitle: "Unknown";
-    }
-
-    Adw.ActionRow fan_row {
-      title: "Fan";
       subtitle: "Unknown";
     }
 

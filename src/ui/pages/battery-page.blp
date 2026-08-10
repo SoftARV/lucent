@@ -35,9 +35,6 @@ template $LucentBatteryPage : Adw.PreferencesPage {
   Adw.PreferencesGroup unavailable {
     visible: false;
 
-    Adw.StatusPage status {
-      icon-name: "dialog-warning-symbolic";
-      title: "Not Available";
-    }
+    $LucentDaemonNotice notice {}
   }
 }

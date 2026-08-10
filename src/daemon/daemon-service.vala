@@ -130,6 +130,8 @@ namespace Lucent {
                 new Variant.string (dbus_name (pspec.name)),
                 new Variant.variant (value));
 
+            string[] invalidated = {};
+
             try {
                 bus.emit_signal (
                     null,
@@ -139,7 +141,7 @@ namespace Lucent {
                     new Variant.tuple ({
                         new Variant.string (DAEMON_BUS_NAME),
                         new Variant.array (new VariantType ("{sv}"), { entry }),
-                        new Variant.strv (new string[0]),
+                        new Variant.strv (invalidated),
                     }));
             } catch (Error e) {
                 warning ("cannot announce %s: %s", pspec.name, e.message);

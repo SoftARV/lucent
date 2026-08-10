@@ -1,0 +1,18 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $LucentDaemonNotice : Adw.Bin {
+
+  child: Adw.StatusPage status {
+    icon-name: "dialog-warning-symbolic";
+    title: "Not Available";
+
+    child: Button enable {
+      label: "Enable Background Service";
+      halign: center;
+      visible: false;
+
+      styles ["pill", "suggested-action"]
+    };
+  };
+}

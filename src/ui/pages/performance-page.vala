@@ -9,7 +9,7 @@ public class Lucent.PerformancePage : Adw.PreferencesPage {
     [GtkChild] private unowned Adw.ActionRow fan_row;
     [GtkChild] private unowned Adw.ActionRow boost_row;
     [GtkChild] private unowned Adw.PreferencesGroup unavailable;
-    [GtkChild] private unowned Adw.StatusPage status;
+    [GtkChild] private unowned DaemonNotice notice;
 
     public signal void report (string message);
 
@@ -22,6 +22,9 @@ public class Lucent.PerformancePage : Adw.PreferencesPage {
 
     public void configure (LaptopService service) {
         this.service = service;
+
+        notice.report.connect ((message) => report (message));
+        notice.configure (service);
 
         connect_signals ();
 
@@ -45,14 +48,7 @@ public class Lucent.PerformancePage : Adw.PreferencesPage {
 
         if (usable) {
             pull ();
-            return;
         }
-
-        status.description = service.present
-            ? "The daemon is running but cannot reach the keyboard.\n\n"
-              + "Its udev rule is probably not installed."
-            : "lucent-daemon is not running.\n\n"
-              + "systemctl --user enable --now lucent-daemon";
     }
 
     private void connect_signals () {

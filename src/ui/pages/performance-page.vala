@@ -11,6 +11,7 @@ public class Lucent.PerformancePage : Adw.PreferencesPage {
     [GtkChild] private unowned Gtk.Label fan_value;
     [GtkChild] private unowned Adw.PreferencesGroup live;
     [GtkChild] private unowned Adw.ActionRow mode_row;
+    [GtkChild] private unowned Adw.ActionRow fan_row;
     [GtkChild] private unowned Adw.ActionRow boost_row;
     [GtkChild] private unowned Adw.PreferencesGroup unavailable;
     [GtkChild] private unowned DaemonNotice notice;
@@ -118,6 +119,7 @@ public class Lucent.PerformancePage : Adw.PreferencesPage {
         show_fan ();
 
         mode_row.subtitle = ((PowerMode) service.power_mode).title ();
+        fan_row.subtitle = describe_fans ();
         boost_row.subtitle = "%s / %s".printf (
             cpu_boost_label (service.cpu_boost),
             gpu_boost_label (service.gpu_boost));
@@ -160,15 +162,34 @@ public class Lucent.PerformancePage : Adw.PreferencesPage {
     }
 
     private void send_fan () {
-        service.apply_fan.begin (fan_manual_row.active,
-                                 (uint) fan_speed.get_value (),
-                                 (obj, res) => {
+        // Clamped to the scale's own bounds rather than to constants from
+        // src/hid/, which is compiled into the daemon only. The daemon
+        // rejects anything outside its range, and a user would read that
+        // rejection as an error rather than as a bug in this page.
+        var limits = fan_speed.adjustment;
+        var rpm = (uint) fan_speed.get_value ().clamp (limits.lower, limits.upper);
+
+        service.apply_fan.begin (fan_manual_row.active, rpm, (obj, res) => {
             try {
                 service.apply_fan.end (res);
             } catch (Error e) {
                 fail (e);
             }
         });
+    }
+
+    // Measured speed, not the setpoint. The EC ramps towards a commanded
+    // speed at roughly 40 RPM per second, so these trail a change by a minute
+    // or more -- showing the request instead would just be a lie with a
+    // number on it.
+    private string describe_fans () {
+        var cpu = service.fan_actual_cpu;
+        var gpu = service.fan_actual_gpu;
+
+        if (cpu == 0 && gpu == 0) {
+            return "Stopped";
+        }
+        return "CPU %u RPM  ·  GPU %u RPM".printf (cpu, gpu);
     }
 
     private void show_fan () {

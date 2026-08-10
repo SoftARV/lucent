@@ -19,6 +19,8 @@ namespace Lucent {
         public abstract uint power_mode { get; }
         public abstract bool fan_manual { get; }
         public abstract uint fan_rpm { get; }
+        public abstract uint fan_actual_cpu { get; }
+        public abstract uint fan_actual_gpu { get; }
         public abstract uint cpu_boost { get; }
         public abstract uint gpu_boost { get; }
         public abstract bool charge_limit_enabled { get; }

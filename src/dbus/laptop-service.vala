@@ -21,6 +21,8 @@ namespace Lucent {
         public uint power_mode { get; private set; default = 0; }
         public bool fan_manual { get; private set; default = false; }
         public uint fan_rpm { get; private set; default = 0; }
+        public uint fan_actual_cpu { get; private set; default = 0; }
+        public uint fan_actual_gpu { get; private set; default = 0; }
         public uint cpu_boost { get; private set; default = 0; }
         public uint gpu_boost { get; private set; default = 0; }
         public bool charge_limit_enabled { get; private set; default = false; }
@@ -82,6 +84,8 @@ namespace Lucent {
             power_mode = proxy.power_mode;
             fan_manual = proxy.fan_manual;
             fan_rpm = proxy.fan_rpm;
+            fan_actual_cpu = proxy.fan_actual_cpu;
+            fan_actual_gpu = proxy.fan_actual_gpu;
             cpu_boost = proxy.cpu_boost;
             gpu_boost = proxy.gpu_boost;
             charge_limit_enabled = proxy.charge_limit_enabled;

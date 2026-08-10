@@ -13,6 +13,9 @@ namespace Lucent {
         private const uint RETRY_DELAY_SECONDS = 2;
         private const int RETRY_LIMIT = 2;
 
+        private const uint ACQUIRE_DELAY_SECONDS = 2;
+        private const int ACQUIRE_LIMIT = 15;
+
         private const string KEY_AC = "power-mode-ac";
         private const string KEY_BATTERY = "power-mode-battery";
 
@@ -37,10 +40,7 @@ namespace Lucent {
         private PowerSource power;
         private DBusConnection? bus = null;
 
-        public DaemonService (LaptopDevice? device) {
-            this.device = device;
-            this.available = device != null;
-
+        public DaemonService () {
             settings = new Settings (Config.APP_ID);
 
             sleep = new SleepMonitor ();
@@ -58,8 +58,52 @@ namespace Lucent {
             });
 
             sync_profiles ();
+            acquire (0);
+        }
+
+        // logind applies the uaccess ACL when the session activates, which
+        // races the user manager starting this service: on a cold boot the
+        // hidraw node exists but is not ours yet for a few hundred
+        // milliseconds. Measured on a real reboot -- the open failed 9 ms
+        // after start, and succeeded on every later attempt. Giving up once
+        // would leave the daemon blind until it was manually restarted.
+        private void acquire (int attempt) {
+            if (try_open ()) {
+                return;
+            }
+
+            if (attempt == 0) {
+                message ("device not ready yet, retrying");
+            }
+
+            if (attempt < ACQUIRE_LIMIT) {
+                Timeout.add_seconds (ACQUIRE_DELAY_SECONDS, () => {
+                    acquire (attempt + 1);
+                    return Source.REMOVE;
+                });
+            } else {
+                warning ("no laptop control device after %d attempts; "
+                         + "is 60-lucent-razer.rules installed?", attempt + 1);
+            }
+        }
+
+        private bool try_open () {
+            if (device != null) {
+                return true;
+            }
+
+            try {
+                device = LaptopDevice.open ();
+            } catch (Error e) {
+                return false;
+            }
+
+            available = true;
+            message ("using %s", device.path);
+
             refresh_state ();
             restore (0);
+            return true;
         }
 
         // Vala 0.56 annotates every exported property with EmitsChangedSignal
@@ -185,10 +229,12 @@ namespace Lucent {
 
         // --- internals -----------------------------------------------------
 
+        // A client asking for something is also a chance to pick the device up,
+        // in case it appeared after the retry ladder above gave up.
         private void require_device () throws Error {
-            if (device == null) {
+            if (!try_open ()) {
                 throw new HidError.NO_DEVICE (
-                    "no laptop control device; is the udev rule installed?");
+                    "no laptop control device; is 60-lucent-razer.rules installed?");
             }
         }
 

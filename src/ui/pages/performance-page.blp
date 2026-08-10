@@ -66,6 +66,10 @@ template $LucentPerformancePage : Adw.PreferencesPage {
           draw-value: false;
 
           adjustment: Adjustment {
+            // value is load-bearing: GtkAdjustment defaults it to 0 and does
+            // not clamp into [lower, upper], so without it the scale starts
+            // at 0 and the first write asks the daemon for 0 RPM.
+            value: 2200;
             lower: 2200;
             upper: 5600;
             step-increment: 100;
@@ -81,6 +85,11 @@ template $LucentPerformancePage : Adw.PreferencesPage {
 
     Adw.ActionRow mode_row {
       title: "Mode";
+      subtitle: "Unknown";
+    }
+
+    Adw.ActionRow fan_row {
+      title: "Fan Speed";
       subtitle: "Unknown";
     }
 

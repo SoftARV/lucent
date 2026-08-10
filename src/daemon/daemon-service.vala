@@ -26,6 +26,8 @@ namespace Lucent {
         public uint power_mode { get; private set; default = 0; }
         public bool fan_manual { get; private set; default = false; }
         public uint fan_rpm { get; private set; default = 0; }
+        public uint fan_actual_cpu { get; private set; default = 0; }
+        public uint fan_actual_gpu { get; private set; default = 0; }
         public uint cpu_boost { get; private set; default = 0; }
         public uint gpu_boost { get; private set; default = 0; }
         public bool charge_limit_enabled { get; private set; default = false; }
@@ -276,6 +278,8 @@ namespace Lucent {
                 bool manual;
                 fan_rpm = device.read_fan_rpm (out manual);
                 fan_manual = manual;
+                fan_actual_cpu = device.read_cpu_fan ();
+                fan_actual_gpu = device.read_gpu_fan ();
 
                 cpu_boost = device.read_cpu_boost ();
                 gpu_boost = device.read_gpu_boost ();

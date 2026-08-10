@@ -140,6 +140,24 @@ namespace Lucent {
             }
         }
 
+        // Measured fan speed, as opposed to the setpoint above. Command 0x88
+        // is not in rcr or razer-ctl; it was found by sweeping the read range
+        // and keeping what changed when the EC ramped the fans by itself.
+        // Reads 0 when the fans are stopped, which they are when cool.
+        public uint read_cpu_fan () throws HidError {
+            return read_actual_fan (ZONE_CPU);
+        }
+
+        public uint read_gpu_fan () throws HidError {
+            return read_actual_fan (ZONE_GPU);
+        }
+
+        private uint read_actual_fan (uint8 zone) throws HidError {
+            var report = new RazerReport (CLASS_POWER, 0x88, 0x03);
+            report.set_args ({ 0x00, zone, 0x00 });
+            return hid.send (report).arg (2) * 100;
+        }
+
         public uint read_cpu_boost () throws HidError {
             return read_boost (ZONE_CPU);
         }

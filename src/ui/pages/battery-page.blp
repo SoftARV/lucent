@@ -1,0 +1,43 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $LucentBatteryPage : Adw.PreferencesPage {
+
+  Adw.PreferencesGroup {
+    Adw.ActionRow level_row {
+      title: "Battery";
+      subtitle: "Unknown";
+    }
+  }
+
+  Adw.PreferencesGroup limits {
+    title: "Charge Limit";
+    description: "Stops charging below full to reduce wear. The laptop's firmware holds this itself, so it survives suspend and reboot even when Lucent is not running.";
+
+    Adw.SwitchRow limit_row {
+      title: "Limit Charging";
+    }
+
+    Adw.SpinRow threshold_row {
+      title: "Stop Charging At";
+      subtitle: "Percent. The firmware accepts 50 to 80.";
+      sensitive: false;
+
+      adjustment: Adjustment {
+        lower: 50;
+        upper: 80;
+        step-increment: 5;
+        page-increment: 10;
+      };
+    }
+  }
+
+  Adw.PreferencesGroup unavailable {
+    visible: false;
+
+    Adw.StatusPage status {
+      icon-name: "dialog-warning-symbolic";
+      title: "Not Available";
+    }
+  }
+}

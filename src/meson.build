@@ -17,6 +17,9 @@ blueprint_compiler = find_program('blueprint-compiler')
 # and silently skips regenerating the .ui files.
 blueprint_files = {
   'window.ui': 'ui/window.blp',
+  'lighting-page.ui': 'ui/pages/lighting-page.blp',
+  'performance-page.ui': 'ui/pages/performance-page.blp',
+  'battery-page.ui': 'ui/pages/battery-page.blp',
   'effect-tile.ui': 'ui/widgets/effect-tile.blp',
   'color-row.ui': 'ui/widgets/color-row.blp',
 }
@@ -42,8 +45,14 @@ sources = files(
   'dbus/razer-proxies.vala',
   'dbus/razer-device.vala',
   'dbus/razer-manager.vala',
+  'dbus/laptop-proxy.vala',
+  'dbus/laptop-service.vala',
   'model/effect.vala',
+  'model/power-mode.vala',
   'ui/window.vala',
+  'ui/pages/lighting-page.vala',
+  'ui/pages/performance-page.vala',
+  'ui/pages/battery-page.vala',
   'ui/widgets/effect-tile.vala',
   'ui/widgets/color-row.vala',
 )
@@ -69,6 +78,7 @@ hid_sources = files(
   'hid/razer-report.vala',
   'hid/hid-device.vala',
   'hid/laptop-device.vala',
+  'model/power-mode.vala',
 )
 
 daemon_sources = files(

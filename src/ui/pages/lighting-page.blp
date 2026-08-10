@@ -1,0 +1,106 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $LucentLightingPage : Adw.PreferencesPage {
+
+  Adw.PreferencesGroup {
+    Adw.PreferencesRow {
+      activatable: false;
+
+      child: Box {
+        orientation: vertical;
+        spacing: 10;
+        margin-top: 14;
+        margin-bottom: 14;
+        margin-start: 14;
+        margin-end: 14;
+
+        Box {
+          spacing: 12;
+
+          Label {
+            label: "Brightness";
+            hexpand: true;
+            xalign: 0;
+          }
+
+          Label brightness_value {
+            width-chars: 4;
+            xalign: 1;
+
+            styles ["numeric", "dim-label"]
+          }
+        }
+
+        Scale brightness {
+          hexpand: true;
+          draw-value: false;
+
+          adjustment: Adjustment {
+            lower: 0;
+            upper: 100;
+            step-increment: 5;
+            page-increment: 10;
+          };
+        }
+
+        Box quick {
+          homogeneous: true;
+
+          styles ["linked"]
+        }
+      };
+    }
+
+    Adw.SwitchRow logo_row {
+      title: "Lid Logo";
+      visible: false;
+    }
+  }
+
+  Adw.PreferencesGroup {
+    title: "Effect";
+
+    FlowBox effects {
+      selection-mode: none;
+      homogeneous: true;
+      min-children-per-line: 2;
+      max-children-per-line: 4;
+      row-spacing: 6;
+      column-spacing: 6;
+    }
+  }
+
+  Adw.PreferencesGroup options {
+    visible: false;
+
+    Adw.ComboRow mode_row {
+      title: "Mode";
+      visible: false;
+    }
+
+    $LucentColorRow primary_row {
+      title: "Color";
+      visible: false;
+    }
+
+    $LucentColorRow secondary_row {
+      title: "Second Color";
+      visible: false;
+    }
+
+    Adw.ComboRow speed_row {
+      title: "Speed";
+      visible: false;
+    }
+
+    Adw.ComboRow direction_row {
+      title: "Direction";
+      visible: false;
+
+      model: StringList {
+        strings ["Right", "Left"]
+      };
+    }
+  }
+}

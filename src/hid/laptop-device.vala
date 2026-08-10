@@ -1,27 +1,6 @@
 namespace Lucent {
 
-    public enum PowerMode {
-        BALANCED = 0,
-        GAMING = 1,
-        CREATOR = 2,
-        SILENT = 3,
-        CUSTOM = 4;
-
-        public string title () {
-            switch (this) {
-                case BALANCED: return "Balanced";
-                case GAMING: return "Gaming";
-                case CREATOR: return "Creator";
-                case SILENT: return "Silent";
-                case CUSTOM: return "Custom";
-                default: return "Unknown";
-            }
-        }
-
-        public static bool is_valid (int value) {
-            return value >= BALANCED && value <= CUSTOM;
-        }
-    }
+    // PowerMode lives in src/model/, shared with the GUI.
 
     // The laptop's fan, power and battery controls. These live on command
     // classes the openrazer driver does not implement, so they are spoken

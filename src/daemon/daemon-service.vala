@@ -35,6 +35,7 @@ namespace Lucent {
         private Settings settings;
         private SleepMonitor sleep;
         private PowerSource power;
+        private DBusConnection? bus = null;
 
         public DaemonService (LaptopDevice? device) {
             this.device = device;
@@ -59,6 +60,78 @@ namespace Lucent {
             sync_profiles ();
             refresh_state ();
             restore (0);
+        }
+
+        // Vala 0.56 annotates every exported property with EmitsChangedSignal
+        // in the introspection XML but generates no code to emit it, so a
+        // client that trusts the annotation never hears about anything. Wire
+        // notify to the real signal by hand; without this the UI has to poll.
+        [DBus (visible = false)]
+        public void attach (DBusConnection connection) {
+            bus = connection;
+            notify.connect (announce);
+        }
+
+        private void announce (ParamSpec pspec) {
+            if (bus == null) {
+                return;
+            }
+
+            var value = property_value (pspec);
+            if (value == null) {
+                return;
+            }
+
+            var entry = new Variant.dict_entry (
+                new Variant.string (dbus_name (pspec.name)),
+                new Variant.variant (value));
+
+            try {
+                bus.emit_signal (
+                    null,
+                    DAEMON_OBJECT_PATH,
+                    "org.freedesktop.DBus.Properties",
+                    "PropertiesChanged",
+                    new Variant.tuple ({
+                        new Variant.string (DAEMON_BUS_NAME),
+                        new Variant.array (new VariantType ("{sv}"), { entry }),
+                        new Variant.strv (new string[0]),
+                    }));
+            } catch (Error e) {
+                warning ("cannot announce %s: %s", pspec.name, e.message);
+            }
+        }
+
+        private Variant? property_value (ParamSpec pspec) {
+            var boxed = Value (pspec.value_type);
+            get_property (pspec.name, ref boxed);
+
+            if (pspec.value_type == typeof (bool)) {
+                return new Variant.boolean (boxed.get_boolean ());
+            }
+            if (pspec.value_type == typeof (uint)) {
+                return new Variant.uint32 (boxed.get_uint ());
+            }
+            if (pspec.value_type == typeof (int)) {
+                return new Variant.int32 (boxed.get_int ());
+            }
+            return null;
+        }
+
+        // GObject names properties with dashes, D-Bus expects the PascalCase
+        // form Vala exported them under.
+        private static string dbus_name (string property_name) {
+            var name = new StringBuilder ();
+
+            foreach (var part in property_name.split ("-")) {
+                if (part.length == 0) {
+                    continue;
+                }
+                name.append (part.substring (0, 1).up ());
+                name.append (part.substring (1));
+            }
+
+            return name.str;
         }
 
         // --- exported ------------------------------------------------------

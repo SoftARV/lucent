@@ -1,14 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
   <schema id="dev.miguel.Lucent" path="/dev/miguel/Lucent/">
-    <key name="power-mode" type="i">
+    <key name="power-mode-ac" type="i">
       <default>-1</default>
-      <summary>Power mode to hold</summary>
+      <summary>Power mode to hold while plugged in</summary>
       <description>
         0 Balanced, 1 Gaming, 2 Creator, 3 Silent, 4 Custom. -1 leaves whatever
-        the firmware chose alone. The EC forgets this across suspend, so the
-        daemon rewrites it on resume; the charge limit needs no equivalent
-        because it survives on its own.
+        the firmware chose alone.
+      </description>
+    </key>
+
+    <key name="power-mode-battery" type="i">
+      <default>-1</default>
+      <summary>Power mode to hold on battery</summary>
+      <description>
+        Same values as power-mode-ac. The EC does not change the mode by itself
+        when the charger is unplugged, so this is a preference rather than a
+        correction; it is what makes the machine drop to a quieter mode on
+        battery without being asked. The mode is lost across suspend either
+        way, which is why the daemon rewrites it on resume. The charge limit
+        needs no equivalent because it survives on its own.
       </description>
     </key>
   </schema>

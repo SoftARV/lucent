@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="dev.miguel.Lucent" path="/dev/miguel/Lucent/">
+    <key name="power-mode" type="i">
+      <default>-1</default>
+      <summary>Power mode to hold</summary>
+      <description>
+        0 Balanced, 1 Gaming, 2 Creator, 3 Silent, 4 Custom. -1 leaves whatever
+        the firmware chose alone. The EC forgets this across suspend, so the
+        daemon rewrites it on resume; the charge limit needs no equivalent
+        because it survives on its own.
+      </description>
+    </key>
+  </schema>
+</schemalist>

@@ -1,0 +1,20 @@
+# Razer Blade laptop control lives on the hidraw nodes of the keyboard device.
+# The openrazer rules tag usb/input/hid, not hidraw, so its group does not help
+# here. uaccess hands an ACL to whoever is logged in at the seat, which is all
+# the daemon needs -- deliberately not MODE="0666", which would open the node
+# to every account on the machine.
+#
+# The 60- prefix is load-bearing. systemd's 73-seat-late.rules is what turns
+# the tag into an ACL:
+#
+#     TAG=="uaccess|xaccess-*", ENV{MAJOR}!="", RUN{builtin}+="uaccess"
+#
+# A rule numbered above 73 sets the tag after that builtin has already run, so
+# the tag appears in CURRENT_TAGS and nothing ever acts on it. Renumber this
+# file above 73 and access silently stops working.
+#
+# Reload with:
+#     sudo udevadm control --reload
+#     sudo udevadm trigger --subsystem-match=hidraw --action=add
+
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1532", ATTRS{idProduct}=="02c5", TAG+="uaccess"

@@ -25,6 +25,13 @@ public class Lucent.PerformancePage : Adw.PreferencesPage {
     private bool syncing = false;
     private bool closing = false;
     private uint fan_debounce = 0;
+    private uint live_poll = 0;
+
+    // Fan speed and temperature move on their own, so the readouts need
+    // polling -- but only while this page is actually on screen. The daemon
+    // deliberately has no timer, so a closed window costs nothing, and
+    // switching to another tab stops the traffic again.
+    private const uint LIVE_POLL_SECONDS = 2;
 
     public void configure (LaptopService service) {
         this.service = service;
@@ -39,14 +46,51 @@ public class Lucent.PerformancePage : Adw.PreferencesPage {
         // fills the page in by itself.
         service.notify.connect (() => sync ());
         sync ();
+
+        map.connect (start_polling);
+        unmap.connect (stop_polling);
+
+        if (get_mapped ()) {
+            start_polling ();
+        }
     }
 
     public void shutdown () {
         closing = true;
+        stop_polling ();
 
         if (fan_debounce != 0) {
             Source.remove (fan_debounce);
             fan_debounce = 0;
+        }
+    }
+
+    private void start_polling () {
+        if (live_poll != 0 || closing) {
+            return;
+        }
+
+        live_poll = Timeout.add_seconds (LIVE_POLL_SECONDS, () => {
+            if (closing || !get_mapped () || !service.present || !service.available) {
+                return Source.CONTINUE;
+            }
+
+            service.refresh.begin ((obj, res) => {
+                try {
+                    service.refresh.end (res);
+                } catch (Error e) {
+                    // Not worth a toast on a background poll; the values simply
+                    // stay where they were.
+                }
+            });
+            return Source.CONTINUE;
+        });
+    }
+
+    private void stop_polling () {
+        if (live_poll != 0) {
+            Source.remove (live_poll);
+            live_poll = 0;
         }
     }
 

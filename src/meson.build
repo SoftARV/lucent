@@ -60,3 +60,30 @@ executable('lucent',
   vala_args: ['--gresourcesdir=' + meson.current_build_dir()],
   install: true,
 )
+
+# The daemon is a separate binary rather than a flag on the one above so it
+# never links GTK or libadwaita. A process that does costs tens of megabytes
+# resident whether or not it opens a window, and this one is resident from
+# login onwards.
+hid_sources = files(
+  'hid/razer-report.vala',
+  'hid/hid-device.vala',
+  'hid/laptop-device.vala',
+)
+
+daemon_sources = files(
+  'daemon/main.vala',
+  'daemon/daemon-service.vala',
+  'daemon/sleep-monitor.vala',
+)
+
+executable('lucent-daemon',
+  hid_sources, daemon_sources, config_vala,
+  dependencies: [
+    dependency('glib-2.0', version: '>= 2.76'),
+    dependency('gobject-2.0'),
+    dependency('gio-2.0'),
+    meson.get_compiler('vala').find_library('posix'),
+  ],
+  install: true,
+)

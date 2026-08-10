@@ -1,0 +1,19 @@
+[Unit]
+Description=Lucent Razer laptop control daemon
+Documentation=https://github.com/SoftARV/lucent
+
+[Service]
+Type=exec
+ExecStart=@BINDIR@/lucent-daemon
+Restart=on-failure
+RestartSec=5
+
+# Deliberately light on sandboxing. This is a user unit, so ProtectSystem and
+# friends need unprivileged user namespaces and fail the unit outright where
+# those are off, and ProtectHome would cut off the dconf database GSettings
+# reads. Nothing here runs privileged anyway: the udev rule hands the hidraw
+# node to the logged-in user.
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

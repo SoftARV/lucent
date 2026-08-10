@@ -24,6 +24,7 @@ namespace Lucent {
 
         // Live values read back off the device.
         public uint power_mode { get; private set; default = 0; }
+        public bool fan_manual { get; private set; default = false; }
         public uint fan_rpm { get; private set; default = 0; }
         public uint cpu_boost { get; private set; default = 0; }
         public uint gpu_boost { get; private set; default = 0; }
@@ -224,6 +225,21 @@ namespace Lucent {
             refresh_state ();
         }
 
+        // Deliberately not stored and not restored. The firmware drops a
+        // manual fan setting across suspend, measured, and that is a safety
+        // net rather than a defect: a speed the machine forgets is one you
+        // cannot leave dangerously low by accident. Reapplying it would
+        // remove the only thing standing between a forgotten 2200 RPM and a
+        // machine under load with its fans idling.
+        public void apply_fan (bool manual, uint rpm) throws Error {
+            require_device ();
+            device.write_fan (manual, rpm);
+            refresh_state ();
+
+            message (manual ? "fan set to %u RPM".printf (rpm)
+                            : "fan returned to the automatic curve");
+        }
+
         public void refresh () throws Error {
             require_device ();
             refresh_state ();
@@ -256,7 +272,11 @@ namespace Lucent {
 
             try {
                 power_mode = device.read_power_mode ();
-                fan_rpm = device.read_fan_rpm ();
+
+                bool manual;
+                fan_rpm = device.read_fan_rpm (out manual);
+                fan_manual = manual;
+
                 cpu_boost = device.read_cpu_boost ();
                 gpu_boost = device.read_gpu_boost ();
 

@@ -19,6 +19,7 @@ namespace Lucent {
 
         public bool on_battery { get; private set; default = false; }
         public uint power_mode { get; private set; default = 0; }
+        public bool fan_manual { get; private set; default = false; }
         public uint fan_rpm { get; private set; default = 0; }
         public uint cpu_boost { get; private set; default = 0; }
         public uint gpu_boost { get; private set; default = 0; }
@@ -79,6 +80,7 @@ namespace Lucent {
             available = proxy.available;
             on_battery = proxy.on_battery;
             power_mode = proxy.power_mode;
+            fan_manual = proxy.fan_manual;
             fan_rpm = proxy.fan_rpm;
             cpu_boost = proxy.cpu_boost;
             gpu_boost = proxy.gpu_boost;
@@ -105,6 +107,11 @@ namespace Lucent {
         public async void apply_charge_limit (bool enabled, uint threshold) throws Error {
             require ();
             yield proxy.apply_charge_limit (enabled, threshold);
+        }
+
+        public async void apply_fan (bool manual, uint rpm) throws Error {
+            require ();
+            yield proxy.apply_fan (manual, rpm);
         }
 
         private void require () throws Error {

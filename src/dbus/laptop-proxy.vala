@@ -17,6 +17,7 @@ namespace Lucent {
         public abstract bool available { get; }
         public abstract bool on_battery { get; }
         public abstract uint power_mode { get; }
+        public abstract bool fan_manual { get; }
         public abstract uint fan_rpm { get; }
         public abstract uint cpu_boost { get; }
         public abstract uint gpu_boost { get; }
@@ -29,6 +30,7 @@ namespace Lucent {
         public abstract async void apply_power_mode_for (bool for_battery, uint mode) throws Error;
         public abstract async void clear_power_mode_for (bool for_battery) throws Error;
         public abstract async void apply_charge_limit (bool enabled, uint threshold) throws Error;
+        public abstract async void apply_fan (bool manual, uint rpm) throws Error;
         public abstract async void refresh () throws Error;
     }
 }

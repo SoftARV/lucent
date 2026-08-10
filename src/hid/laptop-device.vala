@@ -19,6 +19,9 @@ namespace Lucent {
         public const uint CHARGE_LIMIT_MIN = 50;
         public const uint CHARGE_LIMIT_MAX = 80;
 
+        public const uint FAN_RPM_MIN = 2200;
+        public const uint FAN_RPM_MAX = 5600;
+
         private HidDevice hid;
 
         public string path {
@@ -91,17 +94,50 @@ namespace Lucent {
 
         // --- fan and boost, read-only for now -----------------------------
 
-        public uint read_fan_rpm () throws HidError {
-            uint8 manual_fan;
-            read_zone (ZONE_CPU, out manual_fan);
-
-            if (manual_fan == 0) {
-                return 0;  // on the automatic curve; the setpoint register is stale
-            }
+        // The setpoint is returned whatever the flag says; `manual` is what
+        // makes it meaningful. Callers must not present it as a fan speed
+        // while the zone is on its automatic curve.
+        public uint read_fan_rpm (out bool manual) throws HidError {
+            uint8 flag;
+            read_zone (ZONE_CPU, out flag);
+            manual = flag != 0;
 
             var report = new RazerReport (CLASS_POWER, 0x81, 0x03);
             report.set_args ({ 0x00, ZONE_CPU, 0x00 });
             return hid.send (report).arg (2) * 100;
+        }
+
+        // Measured on this model: manual fan works in every power mode and on
+        // either power source. razer-ctl restricts it to Balanced, which is
+        // wrong here, so do not reintroduce that check.
+        public void write_fan (bool manual, uint rpm) throws HidError {
+            if (manual && (rpm < FAN_RPM_MIN || rpm > FAN_RPM_MAX)) {
+                throw new HidError.UNSUPPORTED (
+                    "fan speed %u RPM out of range, this model accepts %u-%u",
+                    rpm, FAN_RPM_MIN, FAN_RPM_MAX);
+            }
+
+            // The manual flag shares a command with the power mode, so the
+            // mode is read and written back unchanged -- the mirror of what
+            // write_power_mode does with the flag.
+            foreach (var zone in new uint8[] { ZONE_CPU, ZONE_GPU }) {
+                uint8 ignored;
+                var mode = read_zone (zone, out ignored);
+
+                var state = new RazerReport (CLASS_POWER, 0x02, 0x04);
+                state.set_args ({ 0x00, zone, (uint8) mode, manual ? 0x01 : 0x00 });
+                hid.send (state);
+            }
+
+            if (!manual) {
+                return;
+            }
+
+            foreach (var zone in new uint8[] { ZONE_CPU, ZONE_GPU }) {
+                var speed = new RazerReport (CLASS_POWER, 0x01, 0x03);
+                speed.set_args ({ 0x00, zone, (uint8) (rpm / 100) });
+                hid.send (speed);
+            }
         }
 
         public uint read_cpu_boost () throws HidError {

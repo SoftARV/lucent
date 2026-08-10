@@ -23,6 +23,7 @@ int main (string[] argv) {
         (connection) => {
             try {
                 connection.register_object (Lucent.DAEMON_OBJECT_PATH, service);
+                service.attach (connection);
             } catch (IOError e) {
                 critical ("cannot export %s: %s", Lucent.DAEMON_OBJECT_PATH, e.message);
                 loop.quit ();

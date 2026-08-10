@@ -1,0 +1,54 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $LucentPerformancePage : Adw.PreferencesPage {
+
+  Adw.PreferencesGroup profiles {
+    title: "Power Mode";
+    description: "Each power source keeps its own mode. Lucent reapplies it after suspend, which the laptop's firmware otherwise forgets.";
+
+    Adw.ComboRow ac_row {
+      title: "Plugged In";
+
+      model: StringList {
+        strings ["Unmanaged", "Balanced", "Gaming", "Creator", "Silent", "Custom"]
+      };
+    }
+
+    Adw.ComboRow battery_row {
+      title: "On Battery";
+
+      model: StringList {
+        strings ["Unmanaged", "Balanced", "Gaming", "Creator", "Silent", "Custom"]
+      };
+    }
+  }
+
+  Adw.PreferencesGroup live {
+    title: "Right Now";
+
+    Adw.ActionRow mode_row {
+      title: "Mode";
+      subtitle: "Unknown";
+    }
+
+    Adw.ActionRow fan_row {
+      title: "Fan";
+      subtitle: "Unknown";
+    }
+
+    Adw.ActionRow boost_row {
+      title: "CPU / GPU Boost";
+      subtitle: "Unknown";
+    }
+  }
+
+  Adw.PreferencesGroup unavailable {
+    visible: false;
+
+    Adw.StatusPage status {
+      icon-name: "dialog-warning-symbolic";
+      title: "Not Available";
+    }
+  }
+}

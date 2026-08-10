@@ -3,8 +3,8 @@ using Adw 1;
 
 template $LucentWindow : Adw.ApplicationWindow {
   title: "Lucent";
-  default-width: 420;
-  default-height: 640;
+  default-width: 440;
+  default-height: 700;
   width-request: 360;
   height-request: 400;
 
@@ -21,108 +21,39 @@ template $LucentWindow : Adw.ApplicationWindow {
         }
       }
 
-      content: Adw.PreferencesPage {
-        Adw.PreferencesGroup {
-          Adw.PreferencesRow {
-            activatable: false;
+      content: Adw.ViewStack stack {
+        Adw.ViewStackPage {
+          name: "lighting";
+          title: "Lighting";
+          icon-name: "night-light-symbolic";
 
-            child: Box {
-              orientation: vertical;
-              spacing: 10;
-              margin-top: 14;
-              margin-bottom: 14;
-              margin-start: 14;
-              margin-end: 14;
-
-              Box {
-                spacing: 12;
-
-                Label {
-                  label: "Brightness";
-                  hexpand: true;
-                  xalign: 0;
-                }
-
-                Label brightness_value {
-                  width-chars: 4;
-                  xalign: 1;
-
-                  styles ["numeric", "dim-label"]
-                }
-              }
-
-              Scale brightness {
-                hexpand: true;
-                draw-value: false;
-
-                adjustment: Adjustment {
-                  lower: 0;
-                  upper: 100;
-                  step-increment: 5;
-                  page-increment: 10;
-                };
-              }
-
-              Box quick {
-                homogeneous: true;
-
-                styles ["linked"]
-              }
-            };
-          }
-
-          Adw.SwitchRow logo_row {
-            title: "Lid Logo";
-            visible: false;
-          }
+          child: $LucentLightingPage lighting {};
         }
 
-        Adw.PreferencesGroup {
-          title: "Effect";
+        Adw.ViewStackPage {
+          name: "performance";
+          title: "Performance";
+          icon-name: "power-profile-performance-symbolic";
 
-          FlowBox effects {
-            selection-mode: none;
-            homogeneous: true;
-            min-children-per-line: 2;
-            max-children-per-line: 4;
-            row-spacing: 6;
-            column-spacing: 6;
-          }
+          child: $LucentPerformancePage performance {};
         }
 
-        Adw.PreferencesGroup options {
-          visible: false;
+        Adw.ViewStackPage {
+          name: "battery";
+          title: "Battery";
+          icon-name: "battery-good-symbolic";
 
-          Adw.ComboRow mode_row {
-            title: "Mode";
-            visible: false;
-          }
-
-          $LucentColorRow primary_row {
-            title: "Color";
-            visible: false;
-          }
-
-          $LucentColorRow secondary_row {
-            title: "Second Color";
-            visible: false;
-          }
-
-          Adw.ComboRow speed_row {
-            title: "Speed";
-            visible: false;
-          }
-
-          Adw.ComboRow direction_row {
-            title: "Direction";
-            visible: false;
-
-            model: StringList {
-              strings ["Right", "Left"]
-            };
-          }
+          child: $LucentBatteryPage battery {};
         }
       };
+
+      // The window is narrow by design, where a header switcher would not fit
+      // three tabs.
+      [bottom]
+      Adw.ViewSwitcherBar {
+        stack: stack;
+        reveal: true;
+      }
     };
   };
 }

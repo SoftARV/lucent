@@ -118,6 +118,14 @@ namespace Lucent {
             yield proxy.apply_fan (manual, rpm);
         }
 
+        // Asks the daemon to re-read the device. Nothing else makes the live
+        // values move: the daemon has no timer of its own, deliberately, so
+        // that it costs nothing while no window is open.
+        public async void refresh () throws Error {
+            require ();
+            yield proxy.refresh ();
+        }
+
         private void require () throws Error {
             if (proxy == null) {
                 throw new IOError.NOT_FOUND (

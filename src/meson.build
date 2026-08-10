@@ -22,6 +22,7 @@ blueprint_files = {
   'battery-page.ui': 'ui/pages/battery-page.blp',
   'effect-tile.ui': 'ui/widgets/effect-tile.blp',
   'color-row.ui': 'ui/widgets/color-row.blp',
+  'daemon-notice.ui': 'ui/widgets/daemon-notice.blp',
 }
 
 blueprints = []
@@ -55,6 +56,7 @@ sources = files(
   'ui/pages/battery-page.vala',
   'ui/widgets/effect-tile.vala',
   'ui/widgets/color-row.vala',
+  'ui/widgets/daemon-notice.vala',
 )
 
 executable('lucent',

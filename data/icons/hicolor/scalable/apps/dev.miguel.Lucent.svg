@@ -2,7 +2,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
   <title>Lucent</title>
   <defs>
-    <linearGradient id="lucent-legend" x1="0" y1="36" x2="0" y2="92" gradientUnits="userSpaceOnUse">
+    <linearGradient id="lucent-legend" x1="0" y1="28" x2="0" y2="96" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#62A0EA"/>
       <stop offset="0.5" stop-color="#9141AC"/>
       <stop offset="1" stop-color="#E01B24"/>
@@ -10,13 +10,13 @@
   </defs>
 
   <g id="keycap">
-    <rect x="22" y="24" width="84" height="84" rx="12" ry="12" fill="#000000"/>
-    <rect x="22" y="24" width="84" height="80" rx="12" ry="12" fill="#241F31"/>
-    <rect x="22" y="24" width="84" height="80" rx="12" ry="12" fill="none" stroke="#000000" stroke-opacity="0.35" stroke-width="2"/>
+    <rect x="12" y="12" width="104" height="104" rx="15" ry="15" fill="#000000"/>
+    <rect x="12" y="12" width="104" height="100" rx="15" ry="15" fill="#241F31"/>
+    <rect x="12" y="12" width="104" height="100" rx="15" ry="15" fill="none" stroke="#000000" stroke-opacity="0.35" stroke-width="2"/>
   </g>
 
   <g id="legend" fill="url(#lucent-legend)">
-    <rect x="44" y="36" width="10" height="56"/>
-    <rect x="44" y="82" width="40" height="10"/>
+    <rect x="40" y="28" width="12" height="68"/>
+    <rect x="40" y="84" width="48" height="12"/>
   </g>
 </svg>

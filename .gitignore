@@ -6,3 +6,11 @@ CLAUDE.md
 __pycache__/
 *.pyc
 tools/*.log
+
+# makepkg working dirs and output. It also rewrites pkgver= in place on every
+# build; that line is a placeholder for a -git package, so do not commit it.
+/packaging/src/
+/packaging/pkg/
+/packaging/lucent/
+/packaging/*.pkg.tar.*
+/packaging/*.log

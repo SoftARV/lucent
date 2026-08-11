@@ -5,16 +5,32 @@
   <project_license>GPL-3.0-or-later</project_license>
 
   <name>Lucent</name>
-  <summary>Control your Razer keyboard lighting</summary>
+  <summary>Control Razer Blade lighting, fans and power</summary>
 
   <description>
     <p>
-      A small, fast GTK4 front end for OpenRazer. Set the brightness and
-      lighting effect of your Razer keyboard without leaving the keyboard.
+      Keyboard lighting, fan speed, power modes and the battery charge limit
+      for Razer Blade laptops. Lucent talks to the hardware directly, so it
+      needs no OpenRazer and no kernel module.
+    </p>
+    <p>
+      A small background service owns the device and costs nothing while it
+      is idle. It restores the power mode the laptop forgets on every
+      suspend, and dims the keyboard with the display rather than with the
+      screen lock.
     </p>
   </description>
 
   <launchable type="desktop-id">dev.miguel.Lucent.desktop</launchable>
+
+  <developer id="dev.miguel">
+    <name>Miguel Rincon</name>
+  </developer>
+
+  <url type="homepage">https://github.com/SoftARV/lucent</url>
+  <url type="bugtracker">https://github.com/SoftARV/lucent/issues</url>
+
+  <content_rating type="oars-1.1"/>
 
   <requires>
     <display_length compare="ge">360</display_length>

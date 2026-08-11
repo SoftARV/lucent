@@ -8,7 +8,6 @@ public class Lucent.RazerDevice : Object {
     private DeviceMisc misc;
     private DeviceBrightness bright;
     private DeviceChroma chroma;
-    private DeviceCustom custom;
     private DeviceLogo logo;
 
     public RazerDevice (string serial) throws Error {
@@ -18,7 +17,6 @@ public class Lucent.RazerDevice : Object {
         misc = Bus.get_proxy_sync<DeviceMisc> (BusType.SESSION, RAZER_BUS, path);
         bright = Bus.get_proxy_sync<DeviceBrightness> (BusType.SESSION, RAZER_BUS, path);
         chroma = Bus.get_proxy_sync<DeviceChroma> (BusType.SESSION, RAZER_BUS, path);
-        custom = Bus.get_proxy_sync<DeviceCustom> (BusType.SESSION, RAZER_BUS, path);
 
         name = misc.get_device_name ();
         device_type = misc.get_device_type ();
@@ -120,14 +118,6 @@ public class Lucent.RazerDevice : Object {
                     yield chroma.set_starlight_dual (r1, g1, b1, r2, g2, b2, s);
                 } else {
                     yield chroma.set_starlight_single (r1, g1, b1, s);
-                }
-                break;
-
-            case Effect.RIPPLE:
-                if (mode == Mode.RANDOM) {
-                    yield custom.set_ripple_random (RIPPLE_REFRESH);
-                } else {
-                    yield custom.set_ripple (r1, g1, b1, RIPPLE_REFRESH);
                 }
                 break;
 

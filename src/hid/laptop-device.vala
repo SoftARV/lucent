@@ -28,6 +28,7 @@ namespace Lucent {
         public const uint FAN_RPM_MAX = 5600;
 
         private HidDevice hid;
+        private KeyboardDevice? keyboard = null;
 
         public string path {
             get { return hid.path; }
@@ -35,6 +36,17 @@ namespace Lucent {
 
         private LaptopDevice (HidDevice hid) {
             this.hid = hid;
+        }
+
+        // Lighting rides the same transport. Vending it from here rather than
+        // opening a second node is what keeps one writer on the device --
+        // openrazer polls the same control endpoint concurrently, and two of
+        // our own writers would be a self-inflicted version of that.
+        public KeyboardDevice lighting () {
+            if (keyboard == null) {
+                keyboard = new KeyboardDevice (hid);
+            }
+            return keyboard;
         }
 
         // Probes each hidraw node the device exposes and keeps the first that

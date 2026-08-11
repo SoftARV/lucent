@@ -98,15 +98,6 @@ namespace Lucent {
         public abstract async void set_starlight_random (uint8 speed) throws Error;
     }
 
-    [DBus (name = "razer.device.lighting.custom")]
-    public interface DeviceCustom : Object {
-        [DBus (name = "setRipple")]
-        public abstract async void set_ripple (uint8 r, uint8 g, uint8 b, double refresh_rate) throws Error;
-
-        [DBus (name = "setRippleRandomColour")]
-        public abstract async void set_ripple_random (double refresh_rate) throws Error;
-    }
-
     [DBus (name = "razer.device.lighting.logo")]
     public interface DeviceLogo : Object {
         [DBus (name = "getLogoActive")]

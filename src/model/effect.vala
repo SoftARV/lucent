@@ -1,7 +1,5 @@
 namespace Lucent {
 
-    public const double RIPPLE_REFRESH = 0.05;
-
     public enum Mode {
         SINGLE,
         DUAL,
@@ -23,8 +21,7 @@ namespace Lucent {
         WAVE,
         REACTIVE,
         BREATH,
-        STARLIGHT,
-        RIPPLE;
+        STARLIGHT;
 
         public string title () {
             switch (this) {
@@ -34,7 +31,6 @@ namespace Lucent {
                 case REACTIVE:  return "Reactive";
                 case BREATH:    return "Breath";
                 case STARLIGHT: return "Starlight";
-                case RIPPLE:    return "Ripple";
                 default:        return "Off";
             }
         }
@@ -47,7 +43,6 @@ namespace Lucent {
                 case REACTIVE:  return "input-keyboard-symbolic";
                 case BREATH:    return "display-brightness-symbolic";
                 case STARLIGHT: return "starred-symbolic";
-                case RIPPLE:    return "network-wireless-symbolic";
                 default:        return "turn-off-symbolic";
             }
         }
@@ -57,8 +52,6 @@ namespace Lucent {
                 case BREATH:
                 case STARLIGHT:
                     return { Mode.SINGLE, Mode.DUAL, Mode.RANDOM };
-                case RIPPLE:
-                    return { Mode.SINGLE, Mode.RANDOM };
                 default:
                     return {};
             }
@@ -71,7 +64,6 @@ namespace Lucent {
                     return 1;
                 case BREATH:
                 case STARLIGHT:
-                case RIPPLE:
                     if (mode == Mode.RANDOM) {
                         return 0;
                     }
@@ -92,12 +84,36 @@ namespace Lucent {
         public bool has_direction () {
             return this == WAVE;
         }
+
+        // Stable name for storage. The family only -- the mode is stored
+        // beside it, rather than openrazer's flat scheme where breathSingle
+        // and breathDual were separate effects.
+        public string id () {
+            switch (this) {
+                case STATIC:    return "static";
+                case SPECTRUM:  return "spectrum";
+                case WAVE:      return "wave";
+                case REACTIVE:  return "reactive";
+                case BREATH:    return "breath";
+                case STARLIGHT: return "starlight";
+                default:        return "off";
+            }
+        }
+
+        public static Effect from_id (string id) {
+            foreach (var candidate in all_effects ()) {
+                if (candidate.id () == id) {
+                    return candidate;
+                }
+            }
+            return Effect.OFF;
+        }
     }
 
     public Effect[] all_effects () {
         return {
             Effect.OFF, Effect.STATIC, Effect.SPECTRUM, Effect.WAVE,
-            Effect.REACTIVE, Effect.BREATH, Effect.STARLIGHT, Effect.RIPPLE,
+            Effect.REACTIVE, Effect.BREATH, Effect.STARLIGHT,
         };
     }
 
@@ -115,8 +131,6 @@ namespace Lucent {
             case "starlightSingle":    effect = Effect.STARLIGHT;                     return;
             case "starlightDual":      effect = Effect.STARLIGHT; mode = Mode.DUAL;   return;
             case "starlightRandom":    effect = Effect.STARLIGHT; mode = Mode.RANDOM; return;
-            case "ripple":             effect = Effect.RIPPLE;                        return;
-            case "rippleRandomColour": effect = Effect.RIPPLE;    mode = Mode.RANDOM; return;
             default:                   effect = Effect.OFF;                           return;
         }
     }

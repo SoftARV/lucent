@@ -80,6 +80,7 @@ hid_sources = files(
   'hid/razer-report.vala',
   'hid/hid-device.vala',
   'hid/laptop-device.vala',
+  'hid/keyboard-device.vala',
   'model/power-mode.vala',
 )
 

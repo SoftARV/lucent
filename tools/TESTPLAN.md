@@ -12,6 +12,24 @@ All commands run from this directory:
 cd ~/Developer/keyboard-controller/tools
 ```
 
+## Close Lucent before measuring anything
+
+Step zero, and it has already invalidated two runs here. The window polls the
+device every two seconds while the Performance page is open, and any click on
+a control writes to it. A mode sweep run with the app open produced readings
+that were really someone dragging the fan slider.
+
+```sh
+pgrep -af '/usr/bin/lucent$' || echo "clear"
+```
+
+Check the daemon journal afterwards too: `fan set to`, `power mode set to`
+lines during your test window mean something else was writing.
+
+Background CPU load is the other one. Anything measuring clocks or fan speed
+needs an otherwise idle machine, and a stray load generator left running is
+invisible unless you look for it.
+
 Every step appends to `razer_snapshot.log`, which lives here and survives
 reboots. Read it at any point with `cat razer_snapshot.log`.
 
@@ -149,6 +167,228 @@ still held our stale 5600. If the CPU zone's setpoint register tracks the EC's
 live target while on auto, it is a real readout rather than dead storage.
 Test by taking several snapshots a minute apart on auto and watching whether
 it moves by itself.
+
+## Mode characterisation results, plugged in
+
+Constant all-core load, 50s per mode, one forward pass, 2026-08-11.
+
+| group | modes | sustained clock | fan |
+|---|---|---|---|
+| high | 1, 2, 4 | 3554 / 3558 / 3556 MHz | 5300-5700 |
+| medium | 0 | 3229 MHz | 3454 |
+| low | 3, 5, 6 | 2900 / 2895 / 2878 MHz | 3400-4100 |
+| odd | 7 | 3025 MHz at 96.8C, near-max fan | 5692 |
+
+**There are three power levels, not eight modes.** Clocks within a group land
+within 5 MHz of each other while the gaps between groups exceed 300 MHz, which
+is far too tight a clustering to be thermal noise.
+
+So **1 and 2 are the same mode** -- we offer them as "Gaming" and "Creator"
+and they are measurably identical -- and **3, 5 and 6 are one mode**. Only 0
+is genuinely in the middle, and it is the one label we can now call certain.
+Mode 7 looks like an invalid value producing undefined behaviour rather than a
+mode: highest temperature of the run and near-max fan for a middling clock.
+
+Caveats. Single forward pass, so mode 0 was measured coolest and mode 7 with
+maximum heat soak: the *clock* groupings survive that, the temperatures do
+not. Mode 4 also had CPU boost left raised from an earlier test, so its clock
+is not purely the mode's doing.
+
+## Mode characterisation results, on battery
+
+Same protocol, unplugged. TLP was verified to be in the same state for both
+runs -- `gov=powersave epp=balance_performance` plugged in and unplugged alike,
+because the explicit `CPU_ENERGY_PERF_POLICY` lines are commented out and
+TLP's own default is `balance_performance` for AC. So the only variable
+between the two runs was the power source.
+
+| mode | clock on AC | clock on battery |
+|---|---|---|
+| 1, 2, 4 (high) | ~3555 MHz | **~2910 MHz** |
+| 0 Balanced | 3229 MHz | 2922 MHz |
+| 3 Silent | 2890 MHz | **2459 MHz** |
+| 5, 6 | ~2890 MHz | ~2895 MHz |
+| 7 | 3025 MHz | 2510 MHz |
+
+**The firmware restricts power modes on battery.** The high group loses about
+650 MHz and lands exactly on Balanced, so unplugged there are only two
+distinguishable behaviours: normal (Balanced, Performance and Custom are all
+the same thing) and reduced (Silent). That is precisely the Balanced plus
+Battery Saver pair Synapse offers on battery, which makes its two-mode battery
+UI honest rather than policy.
+
+Note that Lucent currently offers every mode on battery, so three of those
+choices do nothing.
+
+Modes 5 and 6 sat with Silent on AC and with Balanced on battery. A real mode
+does not change group with the power source; this is more evidence they are
+aliases rather than modes.
+
+Caveat: one forward pass per run, and the AC run's EPP was reconstructed
+afterwards rather than recorded. The tool now prints the CPU-side state at the
+start and end of every run so that cannot happen again.
+
+## Cross-OS tests: naming, reboot survival, and who owns the register
+
+### First: stop our own daemon from writing
+
+This is not optional. `try_open()` calls `restore()` at startup, so on the way
+back from Windows the daemon rewrites the stored profile before anything can
+read what the EC was holding — the reading would just be our own setting. It
+also writes on resume and on AC change.
+
+Setting both profiles to Unmanaged makes `restore()` return early, so the
+daemon runs normally and simply never touches the power mode:
+
+Written out in full rather than through a shell variable: zsh does not
+word-split an unquoted parameter, so `$D ClearPowerModeFor ...` is read as one
+very long command name and fails.
+
+```sh
+busctl --user call dev.miguel.Lucent.Daemon /dev/miguel/Lucent/Daemon \
+  dev.miguel.Lucent.Daemon ClearPowerModeFor b true
+busctl --user call dev.miguel.Lucent.Daemon /dev/miguel/Lucent/Daemon \
+  dev.miguel.Lucent.Daemon ClearPowerModeFor b false
+
+busctl --user get-property dev.miguel.Lucent.Daemon /dev/miguel/Lucent/Daemon \
+  dev.miguel.Lucent.Daemon PowerModeAc
+busctl --user get-property dev.miguel.Lucent.Daemon /dev/miguel/Lucent/Daemon \
+  dev.miguel.Lucent.Daemon PowerModeBattery
+```
+
+Both must read `-1` before you reboot. Restore afterwards with
+`ApplyPowerModeFor bu false 2` and `ApplyPowerModeFor bu true 3`, or whatever
+your profiles were.
+
+Keep Lucent's window closed throughout: touching the mode combo writes.
+
+### Then: separate "survives a reboot" from "Synapse reads it"
+
+Test 1 below conflates two questions. Do this one first, because it removes a
+variable from everything after it:
+
+```sh
+python3 razer_set_mode.py 3        # Silent, distinct from the usual
+python3 razer_snapshot.py --label before-linux-reboot
+# reboot into Linux, then:
+python3 razer_snapshot.py --label after-linux-reboot
+```
+
+If the mode comes back as 3, it survives a reboot and the cross-OS tests mean
+something. If it reverts, the mode is volatile like it is across suspend, and
+neither Windows test can tell us anything about naming — they would only ever
+show the EC's nonvolatile default.
+
+Three open questions, and they overlap enough that two reboots answer all of
+them. Record the mode number before each reboot with `razer_snapshot.py`.
+
+**Does the mode survive a reboot at all?** We know it is dropped across
+suspend, reverting to whatever the EC holds. Reboot was never tested, because
+the value was already gone by the time we looked.
+
+**What are the modes really called?** Our labels come from rcr's table for
+older Blades. Synapse on this model shows Balanced, Silent, Performance and
+Custom plugged in, and Balanced plus Battery Saver on battery -- no Gaming, no
+Creator, though we call mode 2 Creator and this machine sits on it.
+
+**Do Linux and Windows write the same register?** If Synapse reads back what
+we set from Linux, the two are talking to the same place and can be reasoned
+about together. If not, one of them keeps its own copy somewhere else and the
+comparison is meaningless.
+
+### Establishing the label mapping, one trip per label
+
+A write from Synapse survives a reboot where a write from Linux does not, so
+each Windows visit yields one confirmed mapping. Neuter the daemon once, at
+the start, and leave it that way for the whole series -- otherwise it rewrites
+the mode at startup and every reading is just our own stored profile.
+
+For each label: boot Windows, set that profile in Synapse, reboot to Linux,
+and read **before opening Lucent**:
+
+```sh
+python3 razer_snapshot.py --label synapse-<label>
+```
+
+| Synapse label | source | read back | verdict |
+|---|---|---|---|
+| Performance | plugged in | 2 | **void** -- slot already held 2, profile already Performance |
+| Battery Saver | on battery | 6 | **void** -- slot already held 6, profile already Battery Saver |
+| Balanced | plugged in | 2 | unchanged from before; either Balanced is 2 or nothing committed |
+| Silent | plugged in | ? | **do this one** -- must differ from 2, so it is falsifiable |
+| Custom | plugged in | ? | |
+| Balanced | on battery | ? | may differ from the AC one |
+
+**Every reading so far is unfalsifiable.** Both "confirmations" set a profile
+that was already selected, into a slot that already held the value we then
+read back. The rule at the top of this file exists for exactly this and was
+not applied. Pick a label whose value must differ from what is stored, and
+spend a few minutes in Windows before shutting down in case the commit is
+lazy.
+
+The per-source storage means a label can map to different values depending on
+which tab it was set from, so Balanced is worth testing on both. Battery Saver
+being 6 rather than 3 is the precedent: it is a value we had written off as
+unnamed.
+
+Note the tension with the behavioural data. On battery mode 6 clocked 2891 MHz
+while Silent (3) clocked 2459, so the "saver" runs faster than Silent. Either
+it saves through the GPU, display or platform rather than CPU clock, or one of
+those measurements is off.
+
+Battery Saver is the one worth doing even if the others are skipped. The other
+three are tightly constrained by behaviour already -- Custom is the only mode
+where boost controls appear, Silent the only one that differs on battery,
+Balanced the measured middle level -- but Battery Saver could be our 3 wearing
+another name, or a value our enum does not have at all. Behaviour cannot
+distinguish those, because 3 is the only mode that differs on battery either
+way.
+
+For the battery one, set Synapse's On Battery profile, then **unplug before
+rebooting** so that profile is the active one.
+
+### Test 1 — Linux to Windows
+
+Plugged in, from Linux:
+
+```sh
+python3 razer_set_mode.py 3          # Silent, distinct from the usual 2
+python3 razer_snapshot.py --label before-windows
+```
+
+Reboot into Windows, open Synapse's Performance tab, and note **which mode is
+highlighted** on the Plugged In tab.
+
+- highlighted as Silent — same register, mode survives a reboot, and mode 3 is
+  confirmed as Silent
+- highlighted as something else — that name is what 3 really is
+- nothing highlighted, or a default like Balanced — either the mode did not
+  survive, or Synapse keeps its own copy; the next test separates those
+
+Then check the **On Battery** tab without unplugging. Synapse keeps a separate
+profile per power source, exactly as Lucent does. If it shows a different mode
+there, Synapse is a software layer over a single EC value, like our daemon,
+rather than the EC storing one mode per source.
+
+### Test 2 — Windows to Linux
+
+Still in Windows, set the Plugged In profile to **Performance**, the label we
+most likely have wrong. Reboot into Linux:
+
+```sh
+python3 razer_snapshot.py --label after-windows
+```
+
+Whatever number comes back is Performance. That one reading anchors the
+mapping, since Balanced, Silent and Custom are consistent across Synapse, rcr
+and razer-ctl, and 0, 3 and 4 are near-certain already.
+
+### Test 3 — the same on battery
+
+Repeat test 1 unplugged. Synapse only offers Balanced and Battery Saver on
+battery, but we have already shown the EC accepts any mode unplugged, so a
+mode Synapse cannot select may still be sitting there. What Synapse displays
+when the EC holds a mode outside its own list is worth seeing.
 
 ## Safety notes
 

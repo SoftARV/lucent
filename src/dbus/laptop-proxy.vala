@@ -3,6 +3,10 @@ namespace Lucent {
     public const string LAPTOP_BUS_NAME = "dev.miguel.Lucent.Daemon";
     public const string LAPTOP_OBJECT_PATH = "/dev/miguel/Lucent/Daemon";
 
+    // Brightness crosses the bus as the byte the firmware takes, not as the
+    // percentage openrazer's API used to convert for us.
+    public const uint KEYBOARD_BRIGHTNESS_MAX = 255;
+
     // lucent-daemon's interface. Properties are read-only here; every write
     // goes through an Apply call so the daemon stays the only writer to the
     // device.
@@ -28,6 +32,15 @@ namespace Lucent {
         public abstract int power_mode_ac { get; }
         public abstract int power_mode_battery { get; }
 
+        public abstract uint brightness { get; }
+        public abstract bool logo_active { get; }
+        public abstract string effect { owned get; }
+        public abstract uint effect_mode { get; }
+        public abstract uint effect_primary { get; }
+        public abstract uint effect_secondary { get; }
+        public abstract uint effect_speed { get; }
+        public abstract uint wave_direction { get; }
+
         public abstract async void apply_power_mode (uint mode) throws Error;
         public abstract async void apply_power_mode_for (bool for_battery, uint mode) throws Error;
         public abstract async void clear_power_mode_for (bool for_battery) throws Error;
@@ -35,6 +48,11 @@ namespace Lucent {
         public abstract async void apply_fan (bool manual, uint rpm) throws Error;
         public abstract async void apply_cpu_boost (uint level) throws Error;
         public abstract async void apply_gpu_boost (uint level) throws Error;
+        public abstract async void apply_brightness (uint level) throws Error;
+        public abstract async void apply_logo (bool active) throws Error;
+        public abstract async void apply_effect (string name, uint mode, uint primary,
+                                                 uint secondary, uint speed,
+                                                 uint direction) throws Error;
         public abstract async void refresh () throws Error;
     }
 }

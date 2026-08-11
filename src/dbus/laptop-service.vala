@@ -30,6 +30,17 @@ namespace Lucent {
         public int power_mode_ac { get; private set; default = -1; }
         public int power_mode_battery { get; private set; default = -1; }
 
+        // Lighting. The daemon owns this too now, so there is one model and
+        // one transport rather than a second daemon for the keyboard.
+        public uint brightness { get; private set; default = 0; }
+        public bool logo_active { get; private set; default = false; }
+        public string effect { get; private set; default = "off"; }
+        public uint effect_mode { get; private set; default = 0; }
+        public uint effect_primary { get; private set; default = 0; }
+        public uint effect_secondary { get; private set; default = 0; }
+        public uint effect_speed { get; private set; default = 1; }
+        public uint wave_direction { get; private set; default = 2; }
+
         private LaptopProxy? proxy = null;
 
         public LaptopService () {
@@ -92,6 +103,61 @@ namespace Lucent {
             charge_limit_threshold = proxy.charge_limit_threshold;
             power_mode_ac = proxy.power_mode_ac;
             power_mode_battery = proxy.power_mode_battery;
+
+            brightness = proxy.brightness;
+            logo_active = proxy.logo_active;
+            effect = proxy.effect;
+            effect_mode = proxy.effect_mode;
+            effect_primary = proxy.effect_primary;
+            effect_secondary = proxy.effect_secondary;
+            effect_speed = proxy.effect_speed;
+            wave_direction = proxy.wave_direction;
+        }
+
+        // --- lighting -------------------------------------------------------
+
+        // The firmware takes a byte; the slider is a percentage. Rounding
+        // rather than truncating keeps 100% at 255 instead of 254.
+        public static uint8 level_of (double percent) {
+            return (uint8) (percent.clamp (0, 100) / 100.0 * KEYBOARD_BRIGHTNESS_MAX + 0.5);
+        }
+
+        public static double percent_of (uint level) {
+            return (level * 100 + KEYBOARD_BRIGHTNESS_MAX / 2) / KEYBOARD_BRIGHTNESS_MAX;
+        }
+
+        public static Gdk.RGBA rgba_of (uint packed) {
+            return Gdk.RGBA () {
+                red = ((packed >> 16) & 0xff) / 255.0f,
+                green = ((packed >> 8) & 0xff) / 255.0f,
+                blue = (packed & 0xff) / 255.0f,
+                alpha = 1,
+            };
+        }
+
+        public static uint packed_of (Gdk.RGBA rgba) {
+            uint r = (uint) (rgba.red.clamp (0, 1) * 255);
+            uint g = (uint) (rgba.green.clamp (0, 1) * 255);
+            uint b = (uint) (rgba.blue.clamp (0, 1) * 255);
+            return (r << 16) | (g << 8) | b;
+        }
+
+        public async void apply_brightness (double percent) throws Error {
+            require ();
+            yield proxy.apply_brightness (level_of (percent));
+        }
+
+        public async void apply_logo (bool active) throws Error {
+            require ();
+            yield proxy.apply_logo (active);
+        }
+
+        public async void apply_effect (Effect chosen, Mode mode, Gdk.RGBA first,
+                                        Gdk.RGBA second, int speed,
+                                        uint direction) throws Error {
+            require ();
+            yield proxy.apply_effect (chosen.id (), (uint) mode, packed_of (first),
+                                      packed_of (second), (uint) speed, direction);
         }
 
         public int mode_for (bool for_battery) {

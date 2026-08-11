@@ -3,7 +3,7 @@ using Adw 1;
 
 template $LucentLightingPage : Adw.PreferencesPage {
 
-  Adw.PreferencesGroup {
+  Adw.PreferencesGroup levels {
     Adw.PreferencesRow {
       activatable: false;
 
@@ -58,7 +58,7 @@ template $LucentLightingPage : Adw.PreferencesPage {
     }
   }
 
-  Adw.PreferencesGroup {
+  Adw.PreferencesGroup chooser {
     title: "Effect";
 
     FlowBox effects {
@@ -102,5 +102,11 @@ template $LucentLightingPage : Adw.PreferencesPage {
         strings ["Right", "Left"]
       };
     }
+  }
+
+  Adw.PreferencesGroup unavailable {
+    visible: false;
+
+    $LucentDaemonNotice notice {}
   }
 }

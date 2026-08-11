@@ -3,7 +3,7 @@ using Adw 1;
 
 template $LucentLightingPage : Adw.PreferencesPage {
 
-  Adw.PreferencesGroup {
+  Adw.PreferencesGroup levels {
     Adw.PreferencesRow {
       activatable: false;
 
@@ -56,9 +56,15 @@ template $LucentLightingPage : Adw.PreferencesPage {
       title: "Lid Logo";
       visible: false;
     }
+
+    Adw.SwitchRow follow_row {
+      title: "Follow the Screen";
+      subtitle: "Turn the keyboard and lid logo off while the display sleeps";
+      visible: false;
+    }
   }
 
-  Adw.PreferencesGroup {
+  Adw.PreferencesGroup chooser {
     title: "Effect";
 
     FlowBox effects {
@@ -102,5 +108,11 @@ template $LucentLightingPage : Adw.PreferencesPage {
         strings ["Right", "Left"]
       };
     }
+  }
+
+  Adw.PreferencesGroup unavailable {
+    visible: false;
+
+    $LucentDaemonNotice notice {}
   }
 }

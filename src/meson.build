@@ -43,9 +43,6 @@ resources = gnome.compile_resources('lucent-resources',
 sources = files(
   'main.vala',
   'application.vala',
-  'dbus/razer-proxies.vala',
-  'dbus/razer-device.vala',
-  'dbus/razer-manager.vala',
   'dbus/laptop-proxy.vala',
   'dbus/laptop-service.vala',
   'model/effect.vala',
@@ -80,7 +77,9 @@ hid_sources = files(
   'hid/razer-report.vala',
   'hid/hid-device.vala',
   'hid/laptop-device.vala',
+  'hid/keyboard-device.vala',
   'model/power-mode.vala',
+  'model/effect.vala',
 )
 
 daemon_sources = files(
@@ -88,6 +87,7 @@ daemon_sources = files(
   'daemon/daemon-service.vala',
   'daemon/sleep-monitor.vala',
   'daemon/power-source.vala',
+  'daemon/screen-monitor.vala',
 )
 
 executable('lucent-daemon',

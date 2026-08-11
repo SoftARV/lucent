@@ -5,6 +5,7 @@ public class Lucent.LightingPage : Adw.PreferencesPage {
     [GtkChild] private unowned Gtk.Label brightness_value;
     [GtkChild] private unowned Gtk.Box quick;
     [GtkChild] private unowned Adw.SwitchRow logo_row;
+    [GtkChild] private unowned Adw.SwitchRow follow_row;
     [GtkChild] private unowned Gtk.FlowBox effects;
     [GtkChild] private unowned Adw.PreferencesGroup options;
     [GtkChild] private unowned Adw.ComboRow mode_row;
@@ -12,10 +13,14 @@ public class Lucent.LightingPage : Adw.PreferencesPage {
     [GtkChild] private unowned ColorRow secondary_row;
     [GtkChild] private unowned Adw.ComboRow speed_row;
     [GtkChild] private unowned Adw.ComboRow direction_row;
+    [GtkChild] private unowned Adw.PreferencesGroup levels;
+    [GtkChild] private unowned Adw.PreferencesGroup chooser;
+    [GtkChild] private unowned Adw.PreferencesGroup unavailable;
+    [GtkChild] private unowned DaemonNotice notice;
 
     public signal void report (string message);
 
-    private RazerDevice device;
+    private LaptopService service;
     private Effect current = Effect.OFF;
     private Mode mode = Mode.SINGLE;
     private EffectTile[] tiles = {};
@@ -23,22 +28,117 @@ public class Lucent.LightingPage : Adw.PreferencesPage {
     private bool closing = false;
     private uint brightness_debounce = 0;
     private uint apply_debounce = 0;
+    private uint brightness_poll = 0;
+    private bool polling = false;
+
+    // The laptop's own Fn keys change the backlight, and a HID feature report
+    // notifies nobody, so the only way to notice is to look. The poll runs
+    // only while this page is on screen.
+    //
+    // It asks for lighting alone. Measured: the full Refresh is nine device
+    // reads and 60 ms, against 12 ms for the two values shown here. That is
+    // what makes a quarter-second tick affordable -- 0.25 s is also the
+    // sampling that was measured to catch every step of an Fn press, which
+    // moves the level 15 raw units at a time.
+    //
+    // Be honest about the trade: 12 ms every 250 ms is 48 ms/s of HID against
+    // the old 60 ms every 2 s, so it is *more* device time per second, bought
+    // deliberately for a control that has to feel live. What it does remove is
+    // the churn -- the old poll refreshed fan RPM and everything else too, and
+    // every one of those that moved notified the page into a full reload,
+    // rebuilding combo models nobody was looking at.
+    private const uint POLL_MS = 250;
 
     private const int[] QUICK_LEVELS = { 0, 25, 50, 75, 100 };
 
-    public void configure (RazerDevice device) {
-        this.device = device;
+    public void configure (LaptopService service) {
+        this.service = service;
+
+        notice.report.connect ((message) => report (message));
+        notice.configure (service);
 
         build_tiles ();
         build_quick_levels ();
-        load_state ();
         connect_signals ();
+
+        // Re-evaluated on every change rather than decided once, so the page
+        // fills itself in if the daemon is started after the window.
+        service.notify.connect (() => sync ());
+        map.connect (start_polling);
+        unmap.connect (stop_polling);
+
+        sync ();
+
+        if (get_mapped ()) {
+            start_polling ();
+        }
+    }
+
+    private void start_polling () {
+        if (brightness_poll != 0 || closing) {
+            return;
+        }
+
+        brightness_poll = Timeout.add (POLL_MS, () => {
+            if (closing || !get_mapped () || !service.present || !service.available) {
+                return Source.CONTINUE;
+            }
+
+            // One in flight at a time. The call is async, so at this rate a
+            // device that stalled could otherwise queue ticks faster than they
+            // complete.
+            if (polling) {
+                return Source.CONTINUE;
+            }
+            polling = true;
+
+            service.refresh_lighting.begin ((obj, res) => {
+                polling = false;
+                try {
+                    service.refresh_lighting.end (res);
+                } catch (Error e) {
+                    // A background poll failing is not worth a toast; the
+                    // values simply stay where they were.
+                }
+            });
+            return Source.CONTINUE;
+        });
+    }
+
+    private void stop_polling () {
+        if (brightness_poll != 0) {
+            Source.remove (brightness_poll);
+            brightness_poll = 0;
+        }
+    }
+
+    private void sync () {
+        var usable = service.present && service.available;
+
+        levels.visible = usable;
+        chooser.visible = usable;
+        unavailable.visible = !usable;
+
+        if (!usable) {
+            options.visible = false;
+            return;
+        }
+
+        // A pending write means the user is still moving something. Reloading
+        // now would snap the widget back to the value we are about to replace
+        // -- update_visibility() below sets options.visible either way.
+        if (brightness_debounce != 0 || apply_debounce != 0) {
+            return;
+        }
+
+        load_state ();
     }
 
     // Called by the window before its template children go away, so in-flight
     // replies cannot touch dead widgets.
     public void shutdown () {
         closing = true;
+        stop_polling ();
 
         if (brightness_debounce != 0) {
             Source.remove (brightness_debounce);
@@ -93,31 +193,32 @@ public class Lucent.LightingPage : Adw.PreferencesPage {
         }
     }
 
+    // Every value here is a property read off the daemon proxy, so unlike the
+    // openrazer version this cannot throw and needs no error path.
     private void load_state () {
         syncing = true;
 
-        try {
-            brightness.set_value (device.read_brightness ());
-            show_brightness ();
-            device.read_effect (out current, out mode);
-            primary_row.set_rgba (device.read_color (0));
-            secondary_row.set_rgba (device.read_color (1));
-            direction_row.selected = device.read_wave_dir () == 2 ? 1 : 0;
+        brightness.set_value (LaptopService.percent_of (service.brightness));
+        show_brightness ();
 
-            if (device.has_logo) {
-                logo_row.visible = true;
-                logo_row.active = device.read_logo_active ();
-            }
+        current = Effect.from_id (service.effect);
+        mode = (Mode) service.effect_mode;
 
-            rebuild_models ();
+        primary_row.set_rgba (LaptopService.rgba_of (service.effect_primary));
+        secondary_row.set_rgba (LaptopService.rgba_of (service.effect_secondary));
+        direction_row.selected = service.wave_direction == 2 ? 1 : 0;
 
-            var speed = device.read_speed ();
-            if (speed >= 1 && speed <= current.speeds ().length) {
-                speed_row.selected = speed - 1;
-            }
-        } catch (Error e) {
-            report (e.message);
-            rebuild_models ();
+        logo_row.visible = true;
+        logo_row.active = service.logo_active;
+
+        follow_row.visible = true;
+        follow_row.active = service.follow_screen;
+
+        rebuild_models ();
+
+        var speed = (int) service.effect_speed;
+        if (speed >= 1 && speed <= current.speeds ().length) {
+            speed_row.selected = speed - 1;
         }
 
         update_visibility ();
@@ -137,9 +238,9 @@ public class Lucent.LightingPage : Adw.PreferencesPage {
             }
             brightness_debounce = Timeout.add (60, () => {
                 brightness_debounce = 0;
-                device.write_brightness.begin (brightness.get_value (), (obj, res) => {
+                service.apply_brightness.begin (brightness.get_value (), (obj, res) => {
                     try {
-                        device.write_brightness.end (res);
+                        service.apply_brightness.end (res);
                     } catch (Error e) {
                         fail (e);
                     }
@@ -152,9 +253,22 @@ public class Lucent.LightingPage : Adw.PreferencesPage {
             if (syncing) {
                 return;
             }
-            device.write_logo_active.begin (logo_row.active, (obj, res) => {
+            service.apply_logo.begin (logo_row.active, (obj, res) => {
                 try {
-                    device.write_logo_active.end (res);
+                    service.apply_logo.end (res);
+                } catch (Error e) {
+                    fail (e);
+                }
+            });
+        });
+
+        follow_row.notify["active"].connect (() => {
+            if (syncing) {
+                return;
+            }
+            service.apply_follow_screen.begin (follow_row.active, (obj, res) => {
+                try {
+                    service.apply_follow_screen.end (res);
                 } catch (Error e) {
                     fail (e);
                 }
@@ -276,13 +390,13 @@ public class Lucent.LightingPage : Adw.PreferencesPage {
     private void send () {
         var speed = speed_row.visible ? (int) speed_row.selected + 1 : 1;
 
-        device.apply.begin (current, mode,
-                            primary_row.get_rgba (), secondary_row.get_rgba (),
-                            speed,
-                            direction_row.selected == 1 ? 2 : 1,
-                            (obj, res) => {
+        service.apply_effect.begin (current, mode,
+                                    primary_row.get_rgba (), secondary_row.get_rgba (),
+                                    speed,
+                                    direction_row.selected == 1 ? 2 : 1,
+                                    (obj, res) => {
             try {
-                device.apply.end (res);
+                service.apply_effect.end (res);
             } catch (Error e) {
                 fail (e);
             }

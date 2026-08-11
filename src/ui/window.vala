@@ -9,20 +9,19 @@ public class Lucent.Window : Adw.ApplicationWindow {
     private LaptopService laptop;
     private bool torn_down = false;
 
-    public Window (Gtk.Application app, RazerDevice device) {
+    public Window (Gtk.Application app) {
         Object (application: app);
 
-        this.title = device.name;
-
-        // Lighting goes through the openrazer daemon; the laptop controls go
-        // through ours. Two models, two transports, one window.
+        // One model, one transport. Lighting used to come from the openrazer
+        // daemon over a second bus name; it now rides the same hidraw node as
+        // the laptop controls, through our own daemon.
         laptop = new LaptopService ();
 
         lighting.report.connect (toast);
         performance.report.connect (toast);
         battery.report.connect (toast);
 
-        lighting.configure (device);
+        lighting.configure (laptop);
         performance.configure (laptop);
         battery.configure (laptop);
     }

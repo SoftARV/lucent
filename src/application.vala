@@ -52,16 +52,9 @@ public class Lucent.Application : Adw.Application {
             return;
         }
 
-        try {
-            var device = new RazerManager ().primary ();
-            if (device == null) {
-                show_problem ("No Razer device", "The OpenRazer daemon is running but reported no devices.");
-                return;
-            }
-            new Window (this, device).present ();
-        } catch (Error e) {
-            show_problem ("Daemon unavailable", "Could not reach the OpenRazer daemon.\n\n" + e.message);
-        }
+        // Every page copes with the daemon being absent by showing the notice
+        // that offers to enable it, so there is nothing to check for here.
+        new Window (this).present ();
     }
 
     private void show_problem (string title, string detail) {

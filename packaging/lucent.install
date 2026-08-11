@@ -18,8 +18,8 @@ for you.
    grants is applied when a device appears. The keyboard is internal and
    never replugged, so it does not get that permission until the next boot.
 
-The daemon is only needed for the Performance and Battery tabs. Lighting goes
-through the OpenRazer daemon and works without it.
+The service owns the whole device -- lighting as well as the Performance and
+Battery tabs -- so nothing works until it is enabled.
 
 EOF
 }

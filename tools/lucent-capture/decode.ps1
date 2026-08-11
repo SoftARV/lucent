@@ -16,7 +16,14 @@ if (-not (Test-Path $tshark)) { throw "tshark not found at $tshark" }
 if (-not (Test-Path $Path))   { throw "capture not found: $Path" }
 
 # usb.data_fragment holds the full 90-byte report for SET_REPORT control transfers.
-$rows = & $tshark -r $Path -Y "usb.data_fragment" -T fields -e frame.number -e usb.data_fragment 2>$null
+#
+# The wLength/bmRequestType test is load-bearing: other devices on the same hub
+# (Bluetooth, etc) also emit control transfers with a data fragment, and slicing
+# those as if they were 90-byte Razer reports invents commands that do not exist.
+# A 251-byte transfer from the Bluetooth adapter decoded as "class 0x4c id 0x41"
+# before this filter was added.
+$filter = "usb.data_fragment && usb.setup.wLength == 90 && usb.bmRequestType == 0x21"
+$rows = & $tshark -r $Path -Y $filter -T fields -e frame.number -e usb.data_fragment 2>$null
 
 $reports = @()
 foreach ($row in $rows) {

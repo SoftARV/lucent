@@ -249,8 +249,11 @@ skipped.
 
 ## 8. Still open
 
-- **What `0x03` is on AC.** Synapse enumerates it but the AC UI never selects
-  it. Test: on battery, capture each available mode individually.
+- ~~**What `0x03` is on AC.**~~ **RESOLVED in round 3:** `0x03` is Battery
+  Saver. Synapse enumerates it at startup but never offers it in the AC profile,
+  which is why it looked like a phantom AC mode. See `ROUND3.md`. Note that
+  round 2's §1 table below has the battery values inverted — `0x03` is Battery
+  Saver and `0x06` is Balanced, not the other way round.
 - **The `0x0d/0x80` 80-byte block.** Only the first three bytes were non-zero
   (`02 01 02`); worth a targeted read while varying one setting at a time.
 - **Whether the CPU-High/GPU-High interlock is enforced by the EC** or only by

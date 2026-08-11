@@ -168,7 +168,8 @@ public class Lucent.PerformancePage : Adw.PreferencesPage {
         }
         show_fan ();
 
-        mode_row.subtitle = PowerMode.title_for (service.power_mode);
+        mode_row.subtitle = PowerMode.title_for (service.power_mode,
+                                                 service.on_battery);
         fan_row.subtitle = describe_fans ();
 
         // The registers hold a value in every mode but are only acted on in
@@ -275,11 +276,11 @@ public class Lucent.PerformancePage : Adw.PreferencesPage {
 
         if (!same (wanted_ac, ac_modes)) {
             ac_modes = wanted_ac;
-            ac_row.model = labels_for (ac_modes);
+            ac_row.model = labels_for (ac_modes, false);
         }
         if (!same (wanted_battery, battery_modes)) {
             battery_modes = wanted_battery;
-            battery_row.model = labels_for (battery_modes);
+            battery_row.model = labels_for (battery_modes, true);
         }
     }
 
@@ -312,11 +313,13 @@ public class Lucent.PerformancePage : Adw.PreferencesPage {
         return true;
     }
 
-    private static Gtk.StringList labels_for (int[] modes) {
+    // The source matters: the same value is named differently plugged in and
+    // on battery, and "Balanced" is two different values.
+    private static Gtk.StringList labels_for (int[] modes, bool for_battery) {
         var labels = new string[modes.length + 1];
         labels[0] = "Unmanaged";
         for (var i = 0; i < modes.length; i++) {
-            labels[i + 1] = PowerMode.title_for (modes[i]);
+            labels[i + 1] = PowerMode.title_for (modes[i], for_battery);
         }
         return new Gtk.StringList (labels);
     }

@@ -1,38 +1,59 @@
 namespace Lucent {
 
-    // These are Razer's own values, read off the USB wire while driving
-    // Synapse -- see tools/lucent-capture/. Not inferred: Balanced and
-    // Performance were caught alternating five times, Silent and Custom twice
-    // each across two separate sessions.
+    // Razer's own values, read off the USB wire while driving Synapse. See
+    // tools/lucent-capture/ for the captures and the decoder.
     //
-    // Earlier releases had SILENT as 3, inferred from CPU clock alone. That
-    // was wrong. Silent and the mode at 3 sit within 1 MHz of each other on
-    // the CPU and differ almost entirely in graphics power, so nothing short
-    // of the capture could have separated them.
+    // **The label depends on the power source.** "Balanced" is 0x00 plugged in
+    // and 0x06 on battery -- the same word, two different values. A single
+    // global table mislabels one of them, which is exactly the mistake made
+    // twice while working this out: first by inferring names from CPU clock
+    // alone, then by reading a battery capture as though it used the AC set.
     //
-    // Values 1, 3, 6 and 7 are accepted by the EC and behave distinctly, but
-    // Synapse never sends them on AC. 3 is not junk though: it appears in
-    // Synapse's startup enumeration, and it is one of the two values Synapse
-    // uses on battery.
+    // Verified in both directions: two captures with opposite starting modes
+    // produce mirrored sequences, so a wrong mapping cannot survive both.
     public enum PowerMode {
+        // plugged in
         BALANCED = 0,
         PERFORMANCE = 2,
         CUSTOM = 4,
-        SILENT = 5;
+        SILENT = 5,
 
-        public string title () {
-            return title_for (this);
+        // on battery -- a different set, not a subset
+        BATTERY_SAVER = 3,
+        BATTERY_BALANCED = 6;
+
+        public static string title_for (uint value, bool for_battery) {
+            var own = for_battery ? battery_name (value) : ac_name (value);
+            if (own != null) {
+                return own;
+            }
+
+            // A value from the other source can legitimately be live: the
+            // daemon writes the AC mode, you unplug, and nothing has rewritten
+            // it yet. Name it, but say where it belongs.
+            var other = for_battery ? ac_name (value) : battery_name (value);
+            if (other != null) {
+                return "%s (%s)".printf (other, for_battery ? "plugged-in mode"
+                                                            : "battery mode");
+            }
+            return "Mode %u".printf (value);
         }
 
-        // Takes any byte the EC might report, not just the four offered, so a
-        // device sitting on 6 reads as "Mode 6" rather than "Unknown".
-        public static string title_for (uint value) {
+        private static string? ac_name (uint value) {
             switch (value) {
                 case BALANCED: return "Balanced";
                 case PERFORMANCE: return "Performance";
-                case SILENT: return "Silent";
                 case CUSTOM: return "Custom";
-                default: return "Mode %u".printf (value);
+                case SILENT: return "Silent";
+                default: return null;
+            }
+        }
+
+        private static string? battery_name (uint value) {
+            switch (value) {
+                case BATTERY_BALANCED: return "Balanced";
+                case BATTERY_SAVER: return "Battery Saver";
+                default: return null;
             }
         }
 
@@ -40,20 +61,13 @@ namespace Lucent {
             return value >= 0 && value <= 7;
         }
 
-        // Returns raw values rather than enum members because the battery set
-        // includes one that has no name yet.
-        //
-        // Battery is deliberately untouched here. Synapse uses a different
-        // pair of values unplugged, 3 and 6, but which is Balanced and which
-        // is Battery Saver is not established: the capture that recorded it
-        // assumed which button was pressed first, and the opposite reading
-        // fits the measured behaviour better -- 3 clocks 450 MHz *below* 6,
-        // and a saver that runs faster than balanced is backwards. One clean
-        // capture settles it; until then this stays as it was rather than
-        // encoding a mapping that is probably inverted.
+        // What Synapse offers for each source, in its order. On battery it is
+        // only two, and that is honest rather than conservative: the dGPU is
+        // pinned at 65 W whatever the mode, and boost is inert, so Custom
+        // would be a control that does nothing.
         public static int[] offered (bool for_battery) {
             if (for_battery) {
-                return { BALANCED, 3 };
+                return { BATTERY_BALANCED, BATTERY_SAVER };
             }
             return { BALANCED, PERFORMANCE, SILENT, CUSTOM };
         }

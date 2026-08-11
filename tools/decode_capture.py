@@ -30,11 +30,12 @@ KNOWN = {
 
 NOISE = {(0x03, 0x0A), (0x03, 0x0B), (0x0D, 0x88)}
 
-# Captured from Synapse. The two power sources use different value sets: on AC
-# Balanced is 0x00, on battery it is 0x03. Anything not listed is a value the
-# EC accepts but Synapse was never seen to send.
+# Captured from Synapse, both directions verified. The two power sources use
+# different value sets and "Balanced" is not one value -- 0x00 on AC, 0x06 on
+# battery. Anything not listed is a value the EC accepts but Synapse was never
+# seen to send.
 MODES_AC = {0x00: "Balanced", 0x02: "Performance", 0x04: "Custom", 0x05: "Silent"}
-MODES_BAT = {0x03: "Balanced", 0x06: "Battery Saver"}
+MODES_BAT = {0x03: "Battery Saver", 0x06: "Balanced"}
 
 
 def mode_name(value):

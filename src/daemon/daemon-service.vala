@@ -195,7 +195,7 @@ namespace Lucent {
             require_device ();
 
             if (!PowerMode.is_valid ((int) mode)) {
-                throw new HidError.UNSUPPORTED ("power mode %u is not 0-4", mode);
+                throw new HidError.UNSUPPORTED ("power mode %u is outside 0-7", mode);
             }
 
             settings.set_int (for_battery ? KEY_BATTERY : KEY_AC, (int) mode);
@@ -207,10 +207,10 @@ namespace Lucent {
                 device.write_power_mode ((PowerMode) mode);
                 refresh_state ();
                 message ("power mode set to %s on %s",
-                         ((PowerMode) mode).title (), source);
+                         PowerMode.title_for (mode, for_battery), source);
             } else {
                 message ("stored %s for %s, which is not the live source",
-                         ((PowerMode) mode).title (), source);
+                         PowerMode.title_for (mode, for_battery), source);
             }
         }
 
@@ -311,13 +311,16 @@ namespace Lucent {
                 var actual = device.read_power_mode ();
                 if (actual == (PowerMode) desired) {
                     message ("power mode is %s on %s",
-                             actual.title (), on_battery ? "battery" : "AC");
+                             PowerMode.title_for (actual, on_battery),
+                             on_battery ? "battery" : "AC");
                     refresh_state ();
                     return;
                 }
 
                 warning ("attempt %d: asked for %s, device reports %s",
-                         attempt + 1, ((PowerMode) desired).title (), actual.title ());
+                         attempt + 1,
+                         PowerMode.title_for (desired, on_battery),
+                         PowerMode.title_for (actual, on_battery));
             } catch (Error e) {
                 warning ("attempt %d: %s", attempt + 1, e.message);
             }

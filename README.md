@@ -12,33 +12,15 @@ Lucent talks to the hardware directly over `hidraw`. There is no OpenRazer, no P
 `dbus-python`, no kernel module. A small background service owns the device; the GTK4 window is a
 pure D-Bus client of it.
 
-That service is the point of the project. Your Blade forgets its power mode across every suspend,
-so something has to be resident to put it back — and the thing that is resident should not cost
-you anything.
-
-| | lucent-daemon | openrazer-daemon |
-| --- | --- | --- |
-| Memory (PSS) | **1.1 MB** | 22.1 MB |
-| Idle CPU, 180 s | **0.000 s** | 0.590 s |
-
-Measured on the same machine, one writer at a time. The idle figure is a literal zero — no CPU
-ticks, no context switches, the process is never scheduled. Lucent has no timer of its own and
-polls the device only while a window is open showing values that can change behind its back.
-Reproduce it with [`tools/lucent_benchmark.py`](tools/lucent_benchmark.py).
-
 ## What it does
 
 ### Lighting
 
 - Brightness slider with a live percentage, plus 0/25/50/75/100 % quick-set buttons
 - Lid-logo toggle
-- Every effect the keyboard supports, grouped into families so the window stays short
+- Every effect the keyboard supports.
 - **Follows the display, not the session lock.** The keyboard dims when the screen sleeps and lights
-  up the moment it wakes — including on a lock screen, which is where the OpenRazer behaviour was
-  visibly wrong. Measured, the display comes back up to twenty seconds before a lock is dismissed
-- Notices brightness changed with the laptop's own `Fn` keys, within a quarter second
-- Nothing to save: the service replays your effect at startup, because the firmware has no way to
-  be asked what is running
+  up the moment it wakes.
 
 | Effect | Options |
 | --- | --- |
@@ -56,10 +38,9 @@ Option rows appear only for the effect that uses them.
 
 - A power mode **per power source**, so the machine can drop to Silent on battery and go back to
   Performance when you plug in. The firmware loses the mode on every suspend; the service rewrites it
-- Manual fan speed, 2200–5600 RPM, with a live tachometer showing what the fans are actually doing
+- Manual fan speed, with a live tachometer showing what the fans are actually doing
   rather than what was last requested
-- CPU and graphics boost presets, enabled only in Custom mode — measured, they move the GPU power
-  limit there and nowhere else
+- CPU and graphics boost presets, enabled only in Custom mode.
 
 The mode names follow the power source, because the firmware's values do: plugged in you get
 Balanced, Performance, Custom and Silent; on battery, Battery Saver and Balanced. That is not a
@@ -116,7 +97,7 @@ No part of Lucent runs as root, and it never asks for your password.
 
 ## Device support
 
-Developed and tested against a **Razer Blade 14 (2025)** — `1532:02C5`, 6x16 matrix.
+Developed and tested against a **Razer Blade 14 (2025)** — `1532:02C5`.
 
 Other Blades speak the same protocol, but the daemon currently hardcodes this product id and the
 effect list is fixed rather than derived from what the device reports. Both are on the list below.

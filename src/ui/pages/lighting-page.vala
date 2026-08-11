@@ -29,12 +29,25 @@ public class Lucent.LightingPage : Adw.PreferencesPage {
     private uint brightness_debounce = 0;
     private uint apply_debounce = 0;
     private uint brightness_poll = 0;
+    private bool polling = false;
 
     // The laptop's own Fn keys change the backlight, and a HID feature report
-    // notifies nobody, so the only way to notice is to look. Two seconds is
-    // enough to feel live without the daemon ever ticking on its own -- the
-    // poll runs only while this page is on screen.
-    private const uint POLL_SECONDS = 2;
+    // notifies nobody, so the only way to notice is to look. The poll runs
+    // only while this page is on screen.
+    //
+    // It asks for lighting alone. Measured: the full Refresh is nine device
+    // reads and 60 ms, against 12 ms for the two values shown here. That is
+    // what makes a quarter-second tick affordable -- 0.25 s is also the
+    // sampling that was measured to catch every step of an Fn press, which
+    // moves the level 15 raw units at a time.
+    //
+    // Be honest about the trade: 12 ms every 250 ms is 48 ms/s of HID against
+    // the old 60 ms every 2 s, so it is *more* device time per second, bought
+    // deliberately for a control that has to feel live. What it does remove is
+    // the churn -- the old poll refreshed fan RPM and everything else too, and
+    // every one of those that moved notified the page into a full reload,
+    // rebuilding combo models nobody was looking at.
+    private const uint POLL_MS = 250;
 
     private const int[] QUICK_LEVELS = { 0, 25, 50, 75, 100 };
 
@@ -66,14 +79,23 @@ public class Lucent.LightingPage : Adw.PreferencesPage {
             return;
         }
 
-        brightness_poll = Timeout.add_seconds (POLL_SECONDS, () => {
+        brightness_poll = Timeout.add (POLL_MS, () => {
             if (closing || !get_mapped () || !service.present || !service.available) {
                 return Source.CONTINUE;
             }
 
-            service.refresh.begin ((obj, res) => {
+            // One in flight at a time. The call is async, so at this rate a
+            // device that stalled could otherwise queue ticks faster than they
+            // complete.
+            if (polling) {
+                return Source.CONTINUE;
+            }
+            polling = true;
+
+            service.refresh_lighting.begin ((obj, res) => {
+                polling = false;
                 try {
-                    service.refresh.end (res);
+                    service.refresh_lighting.end (res);
                 } catch (Error e) {
                     // A background poll failing is not worth a toast; the
                     // values simply stay where they were.

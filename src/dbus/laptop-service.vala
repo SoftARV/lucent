@@ -210,6 +210,13 @@ namespace Lucent {
             yield proxy.refresh ();
         }
 
+        // The lighting page's poll: brightness and the logo only, so it can run
+        // often enough for the Fn keys to feel live.
+        public async void refresh_lighting () throws Error {
+            require ();
+            yield proxy.refresh_lighting ();
+        }
+
         private void require () throws Error {
             if (proxy == null) {
                 throw new IOError.NOT_FOUND (

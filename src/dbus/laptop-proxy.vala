@@ -56,5 +56,6 @@ namespace Lucent {
                                                  uint secondary, uint speed,
                                                  uint direction) throws Error;
         public abstract async void refresh () throws Error;
+        public abstract async void refresh_lighting () throws Error;
     }
 }

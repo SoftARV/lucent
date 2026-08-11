@@ -408,6 +408,15 @@ namespace Lucent {
             refresh_state ();
         }
 
+        // Brightness and the logo alone. A full refresh_state() is nine device
+        // reads and 60 ms of HID, measured, where these two are 13 ms -- and
+        // the lighting page wants none of the other seven. Polling the cheap
+        // one is what lets the Fn keys feel immediate rather than costing more.
+        public void refresh_lighting () throws Error {
+            require_device ();
+            read_lighting ();
+        }
+
         // --- internals -----------------------------------------------------
 
         private void write_effect (Effect chosen, Mode mode, uint primary, uint secondary,

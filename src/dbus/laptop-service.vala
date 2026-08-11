@@ -118,6 +118,17 @@ namespace Lucent {
             yield proxy.apply_fan (manual, rpm);
         }
 
+        // Separate calls because the hardware writes one zone per change.
+        public async void apply_cpu_boost (uint level) throws Error {
+            require ();
+            yield proxy.apply_cpu_boost (level);
+        }
+
+        public async void apply_gpu_boost (uint level) throws Error {
+            require ();
+            yield proxy.apply_gpu_boost (level);
+        }
+
         // Asks the daemon to re-read the device. Nothing else makes the live
         // values move: the daemon has no timer of its own, deliberately, so
         // that it costs nothing while no window is open.

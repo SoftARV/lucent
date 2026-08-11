@@ -12,7 +12,14 @@ template $LucentBatteryPage : Adw.PreferencesPage {
 
   Adw.PreferencesGroup limits {
     title: "Charge Limit";
-    description: "Stops charging below full to reduce wear. The laptop's firmware holds this itself, so it survives suspend and reboot even when Lucent is not running.";
+
+    header-suffix: Image {
+      icon-name: "help-about-symbolic";
+      valign: center;
+      tooltip-text: "Stops charging below full to reduce wear.\n\nThe laptop's firmware holds this itself, so it survives suspend and reboot even when Lucent is not running. It is the same setting the BIOS offers.";
+
+      styles ["dim-label"]
+    };
 
     Adw.SwitchRow limit_row {
       title: "Limit Charging";

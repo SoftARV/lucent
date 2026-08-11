@@ -4,6 +4,9 @@ public class Lucent.PerformancePage : Adw.PreferencesPage {
     [GtkChild] private unowned Adw.PreferencesGroup profiles;
     [GtkChild] private unowned Adw.ComboRow ac_row;
     [GtkChild] private unowned Adw.ComboRow battery_row;
+    [GtkChild] private unowned Adw.PreferencesGroup boosts;
+    [GtkChild] private unowned Adw.ComboRow cpu_boost_row;
+    [GtkChild] private unowned Adw.ComboRow gpu_boost_row;
     [GtkChild] private unowned Adw.PreferencesGroup fans;
     [GtkChild] private unowned Adw.SwitchRow fan_manual_row;
     [GtkChild] private unowned Adw.PreferencesRow fan_speed_row;
@@ -12,7 +15,6 @@ public class Lucent.PerformancePage : Adw.PreferencesPage {
     [GtkChild] private unowned Adw.PreferencesGroup live;
     [GtkChild] private unowned Adw.ActionRow mode_row;
     [GtkChild] private unowned Adw.ActionRow fan_row;
-    [GtkChild] private unowned Adw.ActionRow boost_row;
     [GtkChild] private unowned Adw.PreferencesGroup unavailable;
     [GtkChild] private unowned DaemonNotice notice;
 
@@ -102,6 +104,7 @@ public class Lucent.PerformancePage : Adw.PreferencesPage {
         var usable = service.present && service.available;
 
         profiles.visible = usable;
+        boosts.visible = usable;
         fans.visible = usable;
         live.visible = usable;
         unavailable.visible = !usable;
@@ -134,6 +137,18 @@ public class Lucent.PerformancePage : Adw.PreferencesPage {
 
             if (!syncing) {
                 push_fan ();
+            }
+        });
+
+        cpu_boost_row.notify["selected"].connect (() => {
+            if (!syncing) {
+                push_boost (true, cpu_boost_row.selected);
+            }
+        });
+
+        gpu_boost_row.notify["selected"].connect (() => {
+            if (!syncing) {
+                push_boost (false, gpu_boost_row.selected);
             }
         });
 
@@ -172,19 +187,19 @@ public class Lucent.PerformancePage : Adw.PreferencesPage {
                                                  service.on_battery);
         fan_row.subtitle = describe_fans ();
 
-        // The registers hold a value in every mode but are only acted on in
-        // Custom, and not at all on battery, where the graphics power limit is
-        // fixed. Showing the numbers bare would imply they were doing
-        // something.
-        var boost = "%s / %s".printf (cpu_boost_label (service.cpu_boost),
-                                      gpu_boost_label (service.gpu_boost));
-        if (service.on_battery) {
-            boost_row.subtitle = boost + "  ·  no effect on battery";
-        } else if (!PowerMode.takes_boost (service.power_mode)) {
-            boost_row.subtitle = boost + "  ·  only applies in Custom";
-        } else {
-            boost_row.subtitle = boost;
-        }
+        cpu_boost_row.selected = boost_row_for (service.cpu_boost);
+        gpu_boost_row.selected = boost_row_for (service.gpu_boost);
+
+        // Live only in Custom and only on AC. Both were measured: the
+        // registers accept a value in every mode but move the graphics power
+        // limit solely in Custom, and not at all unplugged.
+        var live = !service.on_battery && PowerMode.takes_boost (service.power_mode);
+        boosts.sensitive = live;
+
+        var why = service.on_battery ? "No effect on battery"
+                                     : "Only applies in the Custom power mode";
+        cpu_boost_row.subtitle = live ? null : why;
+        gpu_boost_row.subtitle = live ? null : why;
 
         syncing = false;
     }
@@ -337,23 +352,33 @@ public class Lucent.PerformancePage : Adw.PreferencesPage {
         return row == 0 || row > modes.length ? UNMANAGED : modes[row - 1];
     }
 
-    // Boost only takes effect in Custom mode, and is read-only here for now.
-    private static string cpu_boost_label (uint value) {
-        switch (value) {
-            case 0: return "Low";
-            case 1: return "Medium";
-            case 2: return "High";
-            case 3: return "Boost";
-            default: return "Unknown";
+    private void push_boost (bool cpu, uint level) {
+        if (cpu) {
+            service.apply_cpu_boost.begin (level, (obj, res) => {
+                try {
+                    service.apply_cpu_boost.end (res);
+                } catch (Error e) {
+                    fail (e);
+                }
+            });
+            return;
         }
+
+        service.apply_gpu_boost.begin (level, (obj, res) => {
+            try {
+                service.apply_gpu_boost.end (res);
+            } catch (Error e) {
+                fail (e);
+            }
+        });
     }
 
-    private static string gpu_boost_label (uint value) {
-        switch (value) {
-            case 0: return "Low";
-            case 1: return "Medium";
-            case 2: return "High";
-            default: return "Unknown";
-        }
+    // The register takes a fourth value that is not a fourth level -- measured,
+    // it clocks below High -- so anything past the presets shows as Low rather
+    // than inventing a row for it.
+    private static uint boost_row_for (uint level) {
+        return level <= 2 ? level : 0;
     }
+
+
 }

@@ -56,7 +56,13 @@ def mean_clock_mhz():
 
 
 def battery_watts():
+    """Only meaningful while discharging. Plugged in, current_now is the
+    *charging* current, which falls as the battery fills and has nothing to do
+    with what the CPU is drawing -- reported as draw it looks like a mode
+    effect and is not."""
     try:
+        if open("/sys/class/power_supply/AC0/online").read().strip() == "1":
+            return None
         i = int(open("/sys/class/power_supply/BAT0/current_now").read())
         v = int(open("/sys/class/power_supply/BAT0/voltage_now").read())
         return i * v / 1e12

@@ -30,12 +30,29 @@ KNOWN = {
 
 NOISE = {(0x03, 0x0A), (0x03, 0x0B), (0x0D, 0x88)}
 
-MODES = {0x03: "Balanced?", 0x04: "Custom?", 0x05: "Silent?", 0x06: "BatterySaver?"}
+# Captured from Synapse. The two power sources use different value sets: on AC
+# Balanced is 0x00, on battery it is 0x03. Anything not listed is a value the
+# EC accepts but Synapse was never seen to send.
+MODES_AC = {0x00: "Balanced", 0x02: "Performance", 0x04: "Custom", 0x05: "Silent"}
+MODES_BAT = {0x03: "Balanced", 0x06: "Battery Saver"}
+
+
+def mode_name(value):
+    ac = MODES_AC.get(value)
+    bat = MODES_BAT.get(value)
+    if ac and bat:
+        return f"{ac} on AC / {bat} on battery"
+    return ac or (bat + " (battery)" if bat else "not used by Synapse")
 
 
 def reports(path):
+    # Filtering on data length alone catches unrelated traffic on the same
+    # hub: a 251-byte Bluetooth control transfer decodes as a plausible
+    # "class 0x4c id 0x41" and invents a command that does not exist.
+    # Require the Razer setup packet exactly.
     out = subprocess.run(
-        ["tshark", "-r", path, "-Y", "usb.data_fragment",
+        ["tshark", "-r", path,
+         "-Y", "usb.setup.wLength == 90 && usb.bmRequestType == 0x21",
          "-T", "fields", "-e", "frame.number", "-e", "usb.data_fragment"],
         capture_output=True, text=True)
     if out.returncode != 0:
@@ -55,7 +72,7 @@ def describe(cls, cid, size, args):
     name = KNOWN.get((cls, cid), "UNKNOWN")
     note = ""
     if (cls, cid) in ((0x0D, 0x02),) and size >= 3:
-        note = f"   zone={args[1]} mode=0x{args[2]:02x} ({MODES.get(args[2], '?')})"
+        note = f"   zone={args[1]} mode=0x{args[2]:02x} ({mode_name(args[2])})"
         if size >= 4:
             note += f" manual={args[3]}"
     elif (cls, cid) in ((0x0D, 0x07),) and size >= 3:

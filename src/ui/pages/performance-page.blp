@@ -5,22 +5,17 @@ template $LucentPerformancePage : Adw.PreferencesPage {
 
   Adw.PreferencesGroup profiles {
     title: "Power Mode";
-    description: "Each power source keeps its own mode. Lucent reapplies it after suspend, which the laptop's firmware otherwise forgets.";
+    description: "Each power source keeps its own mode. Lucent reapplies it after suspend and at startup, which the laptop's firmware otherwise forgets. On battery the graphics power limit is fixed by the firmware, so fewer modes make any difference there.";
 
+    // Models are built in code: the two rows offer different modes, and the
+    // stored value has to stay representable even when it is one we no longer
+    // offer.
     Adw.ComboRow ac_row {
       title: "Plugged In";
-
-      model: StringList {
-        strings ["Unmanaged", "Balanced", "Gaming", "Creator", "Silent", "Custom"]
-      };
     }
 
     Adw.ComboRow battery_row {
       title: "On Battery";
-
-      model: StringList {
-        strings ["Unmanaged", "Balanced", "Gaming", "Creator", "Silent", "Custom"]
-      };
     }
   }
 

@@ -18,8 +18,12 @@ public class Lucent.PerformancePage : Adw.PreferencesPage {
 
     public signal void report (string message);
 
-    // Row 0 is "Unmanaged"; every row after it is power mode row - 1.
+    // Row 0 is always "Unmanaged"; the rest are whatever modes that source
+    // offers, which differs between AC and battery.
     private const int UNMANAGED = -1;
+
+    private int[] ac_modes = {};
+    private int[] battery_modes = {};
 
     private LaptopService service;
     private bool syncing = false;
@@ -114,13 +118,13 @@ public class Lucent.PerformancePage : Adw.PreferencesPage {
         // from writing back what it just read.
         ac_row.notify["selected"].connect (() => {
             if (!syncing) {
-                push (false, ac_row.selected);
+                push (false, to_mode (ac_modes, ac_row.selected));
             }
         });
 
         battery_row.notify["selected"].connect (() => {
             if (!syncing) {
-                push (true, battery_row.selected);
+                push (true, to_mode (battery_modes, battery_row.selected));
             }
         });
 
@@ -145,8 +149,10 @@ public class Lucent.PerformancePage : Adw.PreferencesPage {
     private void pull () {
         syncing = true;
 
-        ac_row.selected = to_row (service.power_mode_ac);
-        battery_row.selected = to_row (service.power_mode_battery);
+        rebuild_models ();
+
+        ac_row.selected = to_row (ac_modes, service.power_mode_ac);
+        battery_row.selected = to_row (battery_modes, service.power_mode_battery);
 
         ac_row.subtitle = service.on_battery ? null : "Active now";
         battery_row.subtitle = service.on_battery ? "Active now" : null;
@@ -162,17 +168,28 @@ public class Lucent.PerformancePage : Adw.PreferencesPage {
         }
         show_fan ();
 
-        mode_row.subtitle = ((PowerMode) service.power_mode).title ();
+        mode_row.subtitle = PowerMode.title_for (service.power_mode);
         fan_row.subtitle = describe_fans ();
-        boost_row.subtitle = "%s / %s".printf (
-            cpu_boost_label (service.cpu_boost),
-            gpu_boost_label (service.gpu_boost));
+
+        // The registers hold a value in every mode but are only acted on in
+        // Custom, and not at all on battery, where the graphics power limit is
+        // fixed. Showing the numbers bare would imply they were doing
+        // something.
+        var boost = "%s / %s".printf (cpu_boost_label (service.cpu_boost),
+                                      gpu_boost_label (service.gpu_boost));
+        if (service.on_battery) {
+            boost_row.subtitle = boost + "  ·  no effect on battery";
+        } else if (!PowerMode.takes_boost (service.power_mode)) {
+            boost_row.subtitle = boost + "  ·  only applies in Custom";
+        } else {
+            boost_row.subtitle = boost;
+        }
 
         syncing = false;
     }
 
-    private void push (bool for_battery, uint row) {
-        if (row == 0) {
+    private void push (bool for_battery, int mode) {
+        if (mode == UNMANAGED) {
             service.clear_power_mode_for.begin (for_battery, (obj, res) => {
                 try {
                     service.clear_power_mode_for.end (res);
@@ -183,7 +200,7 @@ public class Lucent.PerformancePage : Adw.PreferencesPage {
             return;
         }
 
-        service.apply_power_mode_for.begin (for_battery, row - 1, (obj, res) => {
+        service.apply_power_mode_for.begin (for_battery, (uint) mode, (obj, res) => {
             try {
                 service.apply_power_mode_for.end (res);
             } catch (Error e) {
@@ -249,8 +266,75 @@ public class Lucent.PerformancePage : Adw.PreferencesPage {
         }
     }
 
-    private static uint to_row (int mode) {
-        return mode == UNMANAGED ? 0 : (uint) (mode + 1);
+    // Rebuilt only when the set of modes to show changes, and never from
+    // inside notify::selected -- replacing a ComboRow's model from its own
+    // handler re-enters forever, which is documented in CLAUDE.md.
+    private void rebuild_models () {
+        var wanted_ac = modes_including (false, service.power_mode_ac);
+        var wanted_battery = modes_including (true, service.power_mode_battery);
+
+        if (!same (wanted_ac, ac_modes)) {
+            ac_modes = wanted_ac;
+            ac_row.model = labels_for (ac_modes);
+        }
+        if (!same (wanted_battery, battery_modes)) {
+            battery_modes = wanted_battery;
+            battery_row.model = labels_for (battery_modes);
+        }
+    }
+
+    // A profile stored before these lists were narrowed can hold a mode we no
+    // longer offer. Keeping it in the list means the row shows the truth and
+    // round-trips it, rather than silently rewriting the user's setting.
+    private int[] modes_including (bool for_battery, int stored) {
+        int[] modes = {};
+        foreach (var mode in PowerMode.offered (for_battery)) {
+            modes += (int) mode;
+        }
+
+        if (stored == UNMANAGED) {
+            return modes;
+        }
+        foreach (var mode in modes) {
+            if (mode == stored) {
+                return modes;
+            }
+        }
+        return modes + stored;
+    }
+
+    private static bool same (int[] a, int[] b) {
+        if (a.length != b.length) {
+            return false;
+        }
+        for (var i = 0; i < a.length; i++) {
+            if (a[i] != b[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static Gtk.StringList labels_for (int[] modes) {
+        var labels = new string[modes.length + 1];
+        labels[0] = "Unmanaged";
+        for (var i = 0; i < modes.length; i++) {
+            labels[i + 1] = PowerMode.title_for (modes[i]);
+        }
+        return new Gtk.StringList (labels);
+    }
+
+    private static uint to_row (int[] modes, int mode) {
+        for (var i = 0; i < modes.length; i++) {
+            if (modes[i] == mode) {
+                return i + 1;
+            }
+        }
+        return 0;
+    }
+
+    private static int to_mode (int[] modes, uint row) {
+        return row == 0 || row > modes.length ? UNMANAGED : modes[row - 1];
     }
 
     // Boost only takes effect in Custom mode, and is read-only here for now.

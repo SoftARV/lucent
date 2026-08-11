@@ -37,9 +37,60 @@
       <default>-1</default>
       <summary>Graphics power preset to hold in Custom mode</summary>
       <description>
-        Same values as cpu-boost. Measured to move the dGPU power limit
-        between 50, 80 and 100 W in Custom mode on AC.
+        Same values as cpu-boost. Measured to move the dGPU power limit in
+        Custom mode on AC. The absolute wattages are not stable across
+        machine states, so only the ordering is relied on.
       </description>
+    </key>
+
+    <key name="lighting-effect" type="s">
+      <default>'static'</default>
+      <summary>Keyboard effect to restore at startup</summary>
+      <description>
+        One of off, static, spectrum, wave, reactive, breath, starlight. The
+        firmware has no query for the running effect, so this is the only
+        record of it -- which is also why openrazer kept its own copy. Stored
+        as the family, with the mode beside it, rather than openrazer's flat
+        scheme where breathSingle and breathDual were separate effects.
+      </description>
+    </key>
+
+    <key name="lighting-mode" type="u">
+      <default>0</default>
+      <summary>Effect mode</summary>
+      <description>0 one colour, 1 two colours, 2 random.</description>
+    </key>
+
+    <key name="lighting-primary" type="u">
+      <default>4511276</default>
+      <summary>Primary effect colour, packed 0xRRGGBB</summary>
+      <description>Defaults to Razer green, 0x44D62C.</description>
+    </key>
+
+    <key name="lighting-secondary" type="u">
+      <default>255</default>
+      <summary>Secondary effect colour, packed 0xRRGGBB</summary>
+      <description>Only used by the two-colour modes of breath and starlight.</description>
+    </key>
+
+    <key name="lighting-speed" type="u">
+      <default>1</default>
+      <summary>Effect speed</summary>
+      <description>
+        Reactive takes 1-4 (500 ms to 2 s), starlight 1-3 (fast, normal,
+        slow). Ignored by every other effect.
+      </description>
+    </key>
+
+    <key name="lighting-direction" type="u">
+      <default>2</default>
+      <summary>Wave direction</summary>
+      <description>1 left, 2 right. Ignored by every other effect.</description>
+    </key>
+
+    <key name="lighting-logo" type="b">
+      <default>true</default>
+      <summary>Whether the lid logo is lit</summary>
     </key>
   </schema>
 </schemalist>

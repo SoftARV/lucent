@@ -21,6 +21,14 @@ namespace Lucent {
         private const string KEY_CPU_BOOST = "cpu-boost";
         private const string KEY_GPU_BOOST = "gpu-boost";
 
+        private const string KEY_FX = "lighting-effect";
+        private const string KEY_FX_MODE = "lighting-mode";
+        private const string KEY_FX_PRIMARY = "lighting-primary";
+        private const string KEY_FX_SECONDARY = "lighting-secondary";
+        private const string KEY_FX_SPEED = "lighting-speed";
+        private const string KEY_FX_DIRECTION = "lighting-direction";
+        private const string KEY_FX_LOGO = "lighting-logo";
+
         public bool available { get; private set; default = false; }
         public bool on_battery { get; private set; default = false; }
 
@@ -38,6 +46,18 @@ namespace Lucent {
         // Stored per-source preferences. -1 means leave the firmware alone.
         public int power_mode_ac { get; private set; default = UNMANAGED; }
         public int power_mode_battery { get; private set; default = UNMANAGED; }
+
+        // Lighting. Brightness and the logo are read back from the device;
+        // the rest is remembered here because the firmware cannot be asked
+        // what effect is running. Colours are packed 0xRRGGBB.
+        public uint brightness { get; private set; default = 0; }
+        public bool logo_active { get; private set; default = false; }
+        public string effect { get; private set; default = "off"; }
+        public uint effect_mode { get; private set; default = 0; }
+        public uint effect_primary { get; private set; default = 0; }
+        public uint effect_secondary { get; private set; default = 0; }
+        public uint effect_speed { get; private set; default = 1; }
+        public uint wave_direction { get; private set; default = 2; }
 
         private LaptopDevice? device;
         private Settings settings;
@@ -108,6 +128,7 @@ namespace Lucent {
 
             refresh_state ();
             restore (0);
+            restore_lighting ();
             return true;
         }
 
@@ -165,6 +186,9 @@ namespace Lucent {
             }
             if (pspec.value_type == typeof (int)) {
                 return new Variant.int32 (boxed.get_int ());
+            }
+            if (pspec.value_type == typeof (string)) {
+                return new Variant.string (boxed.get_string () ?? "");
             }
             return null;
         }
@@ -263,12 +287,158 @@ namespace Lucent {
                             : "fan returned to the automatic curve");
         }
 
+        // --- lighting --------------------------------------------------------
+
+        // A byte, not a percentage: the firmware takes 0-255 and openrazer's
+        // D-Bus API was doing the conversion. Not persisted, because it reads
+        // back off the device -- and because the laptop's own Fn keys change
+        // it, so a stored value would fight the keyboard.
+        public void apply_brightness (uint level) throws Error {
+            require_device ();
+            device.lighting ().write_brightness ((uint8) uint.min (level, KeyboardDevice.BRIGHTNESS_MAX));
+            read_lighting ();
+        }
+
+        public void apply_logo (bool active) throws Error {
+            require_device ();
+            device.lighting ().write_logo (active);
+            settings.set_boolean (KEY_FX_LOGO, active);
+            read_lighting ();
+        }
+
+        // One call carrying the whole effect, because that is how the UI
+        // applies it -- everything is coalesced behind one debounce timer
+        // before it reaches the bus.
+        public void apply_effect (string name, uint mode, uint primary, uint secondary,
+                                  uint speed, uint direction) throws Error {
+            require_device ();
+
+            var chosen = Effect.from_id (name);
+            write_effect (chosen, (Mode) mode, primary, secondary, speed, direction);
+
+            settings.set_string (KEY_FX, chosen.id ());
+            settings.set_uint (KEY_FX_MODE, mode);
+            settings.set_uint (KEY_FX_PRIMARY, primary);
+            settings.set_uint (KEY_FX_SECONDARY, secondary);
+            settings.set_uint (KEY_FX_SPEED, speed);
+            settings.set_uint (KEY_FX_DIRECTION, direction);
+
+            effect = chosen.id ();
+            effect_mode = mode;
+            effect_primary = primary;
+            effect_secondary = secondary;
+            effect_speed = speed;
+            wave_direction = direction;
+
+            message ("lighting set to %s", chosen.title ());
+        }
+
         public void refresh () throws Error {
             require_device ();
             refresh_state ();
         }
 
         // --- internals -----------------------------------------------------
+
+        private void write_effect (Effect chosen, Mode mode, uint primary, uint secondary,
+                                   uint speed, uint direction) throws Error {
+            var light = device.lighting ();
+
+            uint8 r1 = (uint8) ((primary >> 16) & 0xff);
+            uint8 g1 = (uint8) ((primary >> 8) & 0xff);
+            uint8 b1 = (uint8) (primary & 0xff);
+            uint8 r2 = (uint8) ((secondary >> 16) & 0xff);
+            uint8 g2 = (uint8) ((secondary >> 8) & 0xff);
+            uint8 b2 = (uint8) (secondary & 0xff);
+            uint8 s = (uint8) speed;
+
+            switch (chosen) {
+                case Effect.STATIC:
+                    light.write_static (r1, g1, b1);
+                    break;
+
+                case Effect.SPECTRUM:
+                    light.write_spectrum ();
+                    break;
+
+                case Effect.WAVE:
+                    light.write_wave ((uint8) direction);
+                    break;
+
+                case Effect.REACTIVE:
+                    light.write_reactive (s, r1, g1, b1);
+                    break;
+
+                case Effect.BREATH:
+                    if (mode == Mode.RANDOM) {
+                        light.write_breath_random ();
+                    } else if (mode == Mode.DUAL) {
+                        light.write_breath_dual (r1, g1, b1, r2, g2, b2);
+                    } else {
+                        light.write_breath_single (r1, g1, b1);
+                    }
+                    break;
+
+                case Effect.STARLIGHT:
+                    if (mode == Mode.RANDOM) {
+                        light.write_starlight_random (s);
+                    } else if (mode == Mode.DUAL) {
+                        light.write_starlight_dual (s, r1, g1, b1, r2, g2, b2);
+                    } else {
+                        light.write_starlight_single (s, r1, g1, b1);
+                    }
+                    break;
+
+                default:
+                    light.write_off ();
+                    break;
+            }
+        }
+
+        // The effect cannot be read back -- the firmware has no query for it,
+        // which is exactly why openrazer kept that in software. So what is
+        // published is what was last written, recovered from GSettings at
+        // startup. Brightness and the logo are real device reads.
+        private void read_lighting () {
+            if (device == null) {
+                return;
+            }
+
+            try {
+                brightness = device.lighting ().read_brightness ();
+                logo_active = device.lighting ().read_logo ();
+            } catch (Error e) {
+                warning ("cannot read lighting state: %s", e.message);
+            }
+        }
+
+        // Only at startup, not on resume. The power mode is measurably dropped
+        // across suspend; whether lighting is has not been measured, and
+        // rewriting it on every resume would stamp on a brightness the Fn keys
+        // had just changed.
+        private void restore_lighting () {
+            if (device == null) {
+                return;
+            }
+
+            effect = settings.get_string (KEY_FX);
+            effect_mode = settings.get_uint (KEY_FX_MODE);
+            effect_primary = settings.get_uint (KEY_FX_PRIMARY);
+            effect_secondary = settings.get_uint (KEY_FX_SECONDARY);
+            effect_speed = settings.get_uint (KEY_FX_SPEED);
+            wave_direction = settings.get_uint (KEY_FX_DIRECTION);
+
+            try {
+                write_effect (Effect.from_id (effect), (Mode) effect_mode,
+                              effect_primary, effect_secondary,
+                              effect_speed, wave_direction);
+                device.lighting ().write_logo (settings.get_boolean (KEY_FX_LOGO));
+            } catch (Error e) {
+                warning ("cannot restore lighting: %s", e.message);
+            }
+
+            read_lighting ();
+        }
 
         // A client asking for something is also a chance to pick the device up,
         // in case it appeared after the retry ladder above gave up.
@@ -335,6 +505,10 @@ namespace Lucent {
             } catch (Error e) {
                 warning ("cannot read device state: %s", e.message);
             }
+
+            // Brightness rides along with the rest: a Refresh is how the UI
+            // notices the Fn keys, since a feature report notifies nobody.
+            read_lighting ();
         }
 
         // The charge limit is deliberately absent here: it is held in EC

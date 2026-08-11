@@ -82,6 +82,7 @@ hid_sources = files(
   'hid/laptop-device.vala',
   'hid/keyboard-device.vala',
   'model/power-mode.vala',
+  'model/effect.vala',
 )
 
 daemon_sources = files(

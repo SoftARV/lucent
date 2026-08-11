@@ -18,6 +18,8 @@ namespace Lucent {
 
         private const string KEY_AC = "power-mode-ac";
         private const string KEY_BATTERY = "power-mode-battery";
+        private const string KEY_CPU_BOOST = "cpu-boost";
+        private const string KEY_GPU_BOOST = "gpu-boost";
 
         public bool available { get; private set; default = false; }
         public bool on_battery { get; private set; default = false; }
@@ -227,6 +229,25 @@ namespace Lucent {
             refresh_state ();
         }
 
+        // One zone per call, because that is what the hardware wants: a CPU
+        // preset change writes zone 0x01 only and a GPU change zone 0x02 only.
+        // Unlike the fan these ARE stored and reapplied, because the firmware
+        // drops them across suspend and a boost the user chose should survive
+        // a lid close.
+        public void apply_cpu_boost (uint level) throws Error {
+            require_device ();
+            device.write_cpu_boost (level);
+            settings.set_int (KEY_CPU_BOOST, (int) level);
+            refresh_state ();
+        }
+
+        public void apply_gpu_boost (uint level) throws Error {
+            require_device ();
+            device.write_gpu_boost (level);
+            settings.set_int (KEY_GPU_BOOST, (int) level);
+            refresh_state ();
+        }
+
         // Deliberately not stored and not restored. The firmware drops a
         // manual fan setting across suspend, measured, and that is a safety
         // net rather than a defect: a speed the machine forgets is one you
@@ -255,6 +276,30 @@ namespace Lucent {
             if (!try_open ()) {
                 throw new HidError.NO_DEVICE (
                     "no laptop control device; is 60-lucent-razer.rules installed?");
+            }
+        }
+
+        // Only in Custom, and only plugged in. Measured: the registers hold a
+        // value in every mode but move the graphics power limit only in
+        // Custom, and not at all on battery. Writing them elsewhere would be
+        // traffic with no effect.
+        private void restore_boost (PowerMode mode) {
+            if (device == null || on_battery || !PowerMode.takes_boost (mode)) {
+                return;
+            }
+
+            var cpu = settings.get_int (KEY_CPU_BOOST);
+            var gpu = settings.get_int (KEY_GPU_BOOST);
+
+            try {
+                if (cpu >= 0) {
+                    device.write_cpu_boost ((uint) cpu);
+                }
+                if (gpu >= 0) {
+                    device.write_gpu_boost ((uint) gpu);
+                }
+            } catch (Error e) {
+                warning ("cannot restore boost: %s", e.message);
             }
         }
 
@@ -307,6 +352,8 @@ namespace Lucent {
 
             try {
                 device.write_power_mode ((PowerMode) desired);
+
+                restore_boost ((PowerMode) desired);
 
                 var actual = device.read_power_mode ();
                 if (actual == (PowerMode) desired) {

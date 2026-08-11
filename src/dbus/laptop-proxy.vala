@@ -33,6 +33,8 @@ namespace Lucent {
         public abstract async void clear_power_mode_for (bool for_battery) throws Error;
         public abstract async void apply_charge_limit (bool enabled, uint threshold) throws Error;
         public abstract async void apply_fan (bool manual, uint rpm) throws Error;
+        public abstract async void apply_cpu_boost (uint level) throws Error;
+        public abstract async void apply_gpu_boost (uint level) throws Error;
         public abstract async void refresh () throws Error;
     }
 }

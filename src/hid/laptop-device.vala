@@ -19,6 +19,11 @@ namespace Lucent {
         public const uint CHARGE_LIMIT_MIN = 50;
         public const uint CHARGE_LIMIT_MAX = 80;
 
+        // Three presets per zone, Low / Medium / High, captured from Synapse.
+        // The register accepts a fourth value but it is not a fourth level:
+        // measured, it clocks *below* High.
+        public const uint BOOST_MAX = 2;
+
         public const uint FAN_RPM_MIN = 2200;
         public const uint FAN_RPM_MAX = 5600;
 
@@ -170,6 +175,30 @@ namespace Lucent {
             var report = new RazerReport (CLASS_POWER, 0x87, 0x03);
             report.set_args ({ 0x00, zone, 0x00 });
             return hid.send (report).arg (2);
+        }
+
+        // Boost writes ONE zone, unlike the power mode and the fan setpoint
+        // which both go to both. Captured from Synapse: a CPU preset change
+        // writes zone 0x01 only and a GPU preset change zone 0x02 only.
+        // Writing both would change a setting the user did not touch.
+        public void write_cpu_boost (uint level) throws HidError {
+            write_boost (ZONE_CPU, level);
+        }
+
+        public void write_gpu_boost (uint level) throws HidError {
+            write_boost (ZONE_GPU, level);
+        }
+
+        private void write_boost (uint8 zone, uint level) throws HidError {
+            if (level > BOOST_MAX) {
+                throw new HidError.UNSUPPORTED (
+                    "boost level %u is out of range, the presets are 0-%u",
+                    level, BOOST_MAX);
+            }
+
+            var report = new RazerReport (CLASS_POWER, 0x07, 0x03);
+            report.set_args ({ 0x00, zone, (uint8) level });
+            hid.send (report);
         }
 
         // --- charge limit -------------------------------------------------

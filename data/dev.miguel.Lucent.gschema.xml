@@ -22,5 +22,24 @@
         needs no equivalent because it survives on its own.
       </description>
     </key>
+    <key name="cpu-boost" type="i">
+      <default>-1</default>
+      <summary>CPU power preset to hold in Custom mode</summary>
+      <description>
+        0 Low, 1 Medium, 2 High. -1 leaves whatever the firmware has. Only
+        acted on in Custom and only while plugged in: measured, the registers
+        hold a value in every mode but move the graphics power limit only in
+        Custom, and not at all on battery.
+      </description>
+    </key>
+
+    <key name="gpu-boost" type="i">
+      <default>-1</default>
+      <summary>Graphics power preset to hold in Custom mode</summary>
+      <description>
+        Same values as cpu-boost. Measured to move the dGPU power limit
+        between 50, 80 and 100 W in Custom mode on AC.
+      </description>
+    </key>
   </schema>
 </schemalist>

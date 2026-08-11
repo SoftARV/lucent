@@ -5,7 +5,16 @@ template $LucentPerformancePage : Adw.PreferencesPage {
 
   Adw.PreferencesGroup profiles {
     title: "Power Mode";
-    description: "Each power source keeps its own mode. Lucent reapplies it after suspend and at startup, which the laptop's firmware otherwise forgets. On battery the graphics power limit is fixed by the firmware, so fewer modes make any difference there.";
+
+    // The explanation lives in a tooltip rather than a description: it is
+    // worth reading once and then only ever in the way.
+    header-suffix: Image {
+      icon-name: "help-about-symbolic";
+      valign: center;
+      tooltip-text: "Each power source keeps its own mode. Lucent reapplies it after suspend and at startup, which the laptop's firmware otherwise forgets.\n\nOn battery the graphics power limit is fixed by the firmware, so fewer modes make any difference there.";
+
+      styles ["dim-label"]
+    };
 
     // Models are built in code: the two rows offer different modes, and the
     // stored value has to stay representable even when it is one we no longer
@@ -19,9 +28,50 @@ template $LucentPerformancePage : Adw.PreferencesPage {
     }
   }
 
+  Adw.PreferencesGroup boosts {
+    title: "Custom Mode";
+
+    header-suffix: Image {
+      icon-name: "help-about-symbolic";
+      valign: center;
+      // No wattages here on purpose. The three levels were measured at
+      // 50/80/100 W in one session and 60/95/115 W in another, with the
+      // card's default and maximum unchanged, so the absolute numbers are not
+      // something to promise. That they move, and in which direction, is.
+      tooltip-text: "These only do anything in the Custom power mode, and only while plugged in — measured directly, not assumed.\n\nGraphics power raises or lowers the card's power limit. On battery it is fixed by the firmware whatever you choose here.\n\nSynapse refuses to let CPU and Graphics both be High. The firmware allows it, so Lucent does too.";
+
+      styles ["dim-label"]
+    };
+
+    // Three fixed levels, so these models are set here and never rebuilt --
+    // no re-entrancy risk from assigning a model inside a notify handler.
+    Adw.ComboRow cpu_boost_row {
+      title: "CPU Power";
+
+      model: StringList {
+        strings ["Low", "Medium", "High"]
+      };
+    }
+
+    Adw.ComboRow gpu_boost_row {
+      title: "Graphics Power";
+
+      model: StringList {
+        strings ["Low", "Medium", "High"]
+      };
+    }
+  }
+
   Adw.PreferencesGroup fans {
     title: "Fan";
-    description: "A manual speed is a temporary override. The firmware returns to its automatic curve after suspend, and Lucent never puts it back — so it cannot be left low by accident.";
+
+    header-suffix: Image {
+      icon-name: "help-about-symbolic";
+      valign: center;
+      tooltip-text: "A manual speed is a temporary override. The firmware returns to its automatic curve after suspend, and Lucent never puts it back — so it cannot be left low by accident.\n\nThe speed shown is measured, not requested. The fans ramp towards a new setting at roughly 40 RPM per second, so it takes a minute or so to arrive.";
+
+      styles ["dim-label"]
+    };
 
     Adw.SwitchRow fan_manual_row {
       title: "Manual Fan Speed";
@@ -85,11 +135,6 @@ template $LucentPerformancePage : Adw.PreferencesPage {
 
     Adw.ActionRow fan_row {
       title: "Fan Speed";
-      subtitle: "Unknown";
-    }
-
-    Adw.ActionRow boost_row {
-      title: "CPU / GPU Boost";
       subtitle: "Unknown";
     }
   }

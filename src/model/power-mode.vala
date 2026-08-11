@@ -1,19 +1,24 @@
 namespace Lucent {
 
-    // The values are the EC's. The names are what each one measurably does,
-    // not Razer's -- those turned out to be unobtainable, because Synapse only
-    // changes the live mode from its own config and that dies at the next
-    // boot. See the Laptop control section of CLAUDE.md for the measurements.
+    // These are Razer's own values, read off the USB wire while driving
+    // Synapse -- see tools/lucent-capture/. Not inferred: Balanced and
+    // Performance were caught alternating five times, Silent and Custom twice
+    // each across two separate sessions.
     //
-    // Only four of the eight accepted values are worth offering. 1 is
-    // identical to PERFORMANCE in every measurement, and 5, 6 and 7 pair a low
-    // CPU clock with a low GPU limit or, in 7's case, run hottest of all for a
-    // marginal gain.
+    // Earlier releases had SILENT as 3, inferred from CPU clock alone. That
+    // was wrong. Silent and the mode at 3 sit within 1 MHz of each other on
+    // the CPU and differ almost entirely in graphics power, so nothing short
+    // of the capture could have separated them.
+    //
+    // Values 1, 3, 6 and 7 are accepted by the EC and behave distinctly, but
+    // Synapse never sends them on AC. 3 is not junk though: it appears in
+    // Synapse's startup enumeration, and it is one of the two values Synapse
+    // uses on battery.
     public enum PowerMode {
         BALANCED = 0,
         PERFORMANCE = 2,
-        SILENT = 3,
-        CUSTOM = 4;
+        CUSTOM = 4,
+        SILENT = 5;
 
         public string title () {
             return title_for (this);
@@ -35,12 +40,20 @@ namespace Lucent {
             return value >= 0 && value <= 7;
         }
 
-        // On battery the dGPU is pinned at 65 W whatever the mode, and boost
-        // is inert, so only the two that still differ on the CPU side are
-        // offered there. Anything else would be a control that does nothing.
-        public static PowerMode[] offered (bool for_battery) {
+        // Returns raw values rather than enum members because the battery set
+        // includes one that has no name yet.
+        //
+        // Battery is deliberately untouched here. Synapse uses a different
+        // pair of values unplugged, 3 and 6, but which is Balanced and which
+        // is Battery Saver is not established: the capture that recorded it
+        // assumed which button was pressed first, and the opposite reading
+        // fits the measured behaviour better -- 3 clocks 450 MHz *below* 6,
+        // and a saver that runs faster than balanced is backwards. One clean
+        // capture settles it; until then this stays as it was rather than
+        // encoding a mapping that is probably inverted.
+        public static int[] offered (bool for_battery) {
             if (for_battery) {
-                return { BALANCED, SILENT };
+                return { BALANCED, 3 };
             }
             return { BALANCED, PERFORMANCE, SILENT, CUSTOM };
         }

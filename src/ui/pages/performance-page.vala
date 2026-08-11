@@ -287,10 +287,7 @@ public class Lucent.PerformancePage : Adw.PreferencesPage {
     // longer offer. Keeping it in the list means the row shows the truth and
     // round-trips it, rather than silently rewriting the user's setting.
     private int[] modes_including (bool for_battery, int stored) {
-        int[] modes = {};
-        foreach (var mode in PowerMode.offered (for_battery)) {
-            modes += (int) mode;
-        }
+        var modes = PowerMode.offered (for_battery);
 
         if (stored == UNMANAGED) {
             return modes;

@@ -5,6 +5,7 @@ public class Lucent.LightingPage : Adw.PreferencesPage {
     [GtkChild] private unowned Gtk.Label brightness_value;
     [GtkChild] private unowned Gtk.Box quick;
     [GtkChild] private unowned Adw.SwitchRow logo_row;
+    [GtkChild] private unowned Adw.SwitchRow follow_row;
     [GtkChild] private unowned Gtk.FlowBox effects;
     [GtkChild] private unowned Adw.PreferencesGroup options;
     [GtkChild] private unowned Adw.ComboRow mode_row;
@@ -188,6 +189,9 @@ public class Lucent.LightingPage : Adw.PreferencesPage {
         logo_row.visible = true;
         logo_row.active = service.logo_active;
 
+        follow_row.visible = true;
+        follow_row.active = service.follow_screen;
+
         rebuild_models ();
 
         var speed = (int) service.effect_speed;
@@ -230,6 +234,19 @@ public class Lucent.LightingPage : Adw.PreferencesPage {
             service.apply_logo.begin (logo_row.active, (obj, res) => {
                 try {
                     service.apply_logo.end (res);
+                } catch (Error e) {
+                    fail (e);
+                }
+            });
+        });
+
+        follow_row.notify["active"].connect (() => {
+            if (syncing) {
+                return;
+            }
+            service.apply_follow_screen.begin (follow_row.active, (obj, res) => {
+                try {
+                    service.apply_follow_screen.end (res);
                 } catch (Error e) {
                     fail (e);
                 }

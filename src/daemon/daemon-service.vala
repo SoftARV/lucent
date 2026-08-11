@@ -28,6 +28,7 @@ namespace Lucent {
         private const string KEY_FX_SPEED = "lighting-speed";
         private const string KEY_FX_DIRECTION = "lighting-direction";
         private const string KEY_FX_LOGO = "lighting-logo";
+        private const string KEY_FX_FOLLOW = "lighting-follow-screen";
 
         public bool available { get; private set; default = false; }
         public bool on_battery { get; private set; default = false; }
@@ -58,12 +59,27 @@ namespace Lucent {
         public uint effect_secondary { get; private set; default = 0; }
         public uint effect_speed { get; private set; default = 1; }
         public uint wave_direction { get; private set; default = 2; }
+        public bool follow_screen { get; private set; default = true; }
 
         private LaptopDevice? device;
         private Settings settings;
         private SleepMonitor sleep;
         private PowerSource power;
+        private ScreenMonitor screen;
         private DBusConnection? bus = null;
+
+        // What the lighting was on the way into a blank, and whether we are the
+        // reason it is dark. Held in memory rather than GSettings: it is a
+        // record of one blank, not a preference, and a value that outlived the
+        // process would be replayed over whatever the Fn keys had since set.
+        //
+        // The logo needs no saved value, only a flag -- it is taken down only
+        // when it was lit, so putting it back is always "on". The two are
+        // tracked separately so that setting one by hand does not cancel the
+        // other's restore.
+        private uint8 saved_brightness = 0;
+        private bool brightness_suspended = false;
+        private bool logo_suspended = false;
 
         public DaemonService () {
             settings = new Settings (Config.APP_ID);
@@ -80,6 +96,13 @@ namespace Lucent {
                 on_battery = power.on_battery;
                 message ("now on %s", on_battery ? "battery" : "AC");
                 restore (0);
+            });
+
+            follow_screen = settings.get_boolean (KEY_FX_FOLLOW);
+
+            screen = new ScreenMonitor ();
+            screen.changed.connect (() => {
+                sync_backlight ();
             });
 
             sync_profiles ();
@@ -129,6 +152,11 @@ namespace Lucent {
             refresh_state ();
             restore (0);
             restore_lighting ();
+
+            // The acquire ladder can hand us the device seconds after the
+            // screen state is already known, so the blank edge may have come
+            // and gone before there was anything to write to.
+            sync_backlight ();
             return true;
         }
 
@@ -295,12 +323,54 @@ namespace Lucent {
         // it, so a stored value would fight the keyboard.
         public void apply_brightness (uint level) throws Error {
             require_device ();
+
+            // An explicit write wins. Whoever asked for a level while the panel
+            // is dark meant it, and the value captured at the blank is stale
+            // from here -- restoring it at the next wake would undo them.
+            brightness_suspended = false;
+
             device.lighting ().write_brightness ((uint8) uint.min (level, KeyboardDevice.BRIGHTNESS_MAX));
             read_lighting ();
         }
 
+        // Off hands the keyboard and the logo straight back if we are holding
+        // them dark: the setting meant to stop Lucent touching the lighting
+        // must not be the thing that leaves it off.
+        public void apply_follow_screen (bool enabled) throws Error {
+            settings.set_boolean (KEY_FX_FOLLOW, enabled);
+            follow_screen = enabled;
+
+            if (enabled) {
+                sync_backlight ();
+                return;
+            }
+
+            if (device == null) {
+                return;
+            }
+
+            try {
+                if (brightness_suspended) {
+                    device.lighting ().write_brightness (saved_brightness);
+                    brightness_suspended = false;
+                }
+                if (logo_suspended) {
+                    device.lighting ().write_logo (true);
+                    logo_suspended = false;
+                }
+                read_lighting ();
+            } catch (Error e) {
+                warning ("cannot hand the lighting back: %s", e.message);
+            }
+        }
+
         public void apply_logo (bool active) throws Error {
             require_device ();
+
+            // As with brightness: an explicit write is not something to undo
+            // at the next wake.
+            logo_suspended = false;
+
             device.lighting ().write_logo (active);
             settings.set_boolean (KEY_FX_LOGO, active);
             read_lighting ();
@@ -412,9 +482,10 @@ namespace Lucent {
             }
         }
 
-        // Only at startup, not on resume. The power mode is measurably dropped
-        // across suspend; whether lighting is has not been measured, and
-        // rewriting it on every resume would stamp on a brightness the Fn keys
+        // Only at startup, not on resume. Measured: the power mode is dropped
+        // across suspend but lighting is not, and a lid close only blanks the
+        // panel rather than losing the state. So a resume has nothing to put
+        // back, and rewriting it there would stamp on a brightness the Fn keys
         // had just changed.
         private void restore_lighting () {
             if (device == null) {
@@ -438,6 +509,59 @@ namespace Lucent {
             }
 
             read_lighting ();
+        }
+
+        // The lighting follows the panel, not the session lock -- see
+        // ScreenMonitor for why those are different and by how much. The lid
+        // logo goes with the keyboard: it is lighting on the same machine, and
+        // leaving it lit over a dark keyboard looks like a bug rather than a
+        // decision.
+        //
+        // Brightness is otherwise never replayed, because the Fn keys own it.
+        // This is the one sanctioned exception and it is deliberately narrow:
+        // what was captured at a blank, written back at the very next wake, and
+        // dropped the moment anyone sets it themselves.
+        private void sync_backlight () {
+            if (device == null || !follow_screen) {
+                return;
+            }
+
+            var light = device.lighting ();
+
+            try {
+                if (screen.blanked) {
+                    // Each half is guarded on its own flag, so a second blank
+                    // with no wake between cannot overwrite what was saved with
+                    // the dark values we wrote ourselves.
+                    if (!brightness_suspended) {
+                        var level = light.read_brightness ();
+                        if (level > 0) {
+                            saved_brightness = level;
+                            light.write_brightness (0);
+                            brightness_suspended = true;
+                        }
+                    }
+
+                    if (!logo_suspended && light.read_logo ()) {
+                        light.write_logo (false);
+                        logo_suspended = true;
+                    }
+                } else {
+                    if (brightness_suspended) {
+                        light.write_brightness (saved_brightness);
+                        brightness_suspended = false;
+                    }
+
+                    if (logo_suspended) {
+                        light.write_logo (true);
+                        logo_suspended = false;
+                    }
+                }
+
+                read_lighting ();
+            } catch (Error e) {
+                warning ("cannot follow the screen: %s", e.message);
+            }
         }
 
         // A client asking for something is also a chance to pick the device up,

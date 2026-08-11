@@ -40,6 +40,7 @@ namespace Lucent {
         public abstract uint effect_secondary { get; }
         public abstract uint effect_speed { get; }
         public abstract uint wave_direction { get; }
+        public abstract bool follow_screen { get; }
 
         public abstract async void apply_power_mode (uint mode) throws Error;
         public abstract async void apply_power_mode_for (bool for_battery, uint mode) throws Error;
@@ -50,6 +51,7 @@ namespace Lucent {
         public abstract async void apply_gpu_boost (uint level) throws Error;
         public abstract async void apply_brightness (uint level) throws Error;
         public abstract async void apply_logo (bool active) throws Error;
+        public abstract async void apply_follow_screen (bool enabled) throws Error;
         public abstract async void apply_effect (string name, uint mode, uint primary,
                                                  uint secondary, uint speed,
                                                  uint direction) throws Error;

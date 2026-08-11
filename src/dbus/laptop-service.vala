@@ -40,6 +40,7 @@ namespace Lucent {
         public uint effect_secondary { get; private set; default = 0; }
         public uint effect_speed { get; private set; default = 1; }
         public uint wave_direction { get; private set; default = 2; }
+        public bool follow_screen { get; private set; default = true; }
 
         private LaptopProxy? proxy = null;
 
@@ -112,6 +113,7 @@ namespace Lucent {
             effect_secondary = proxy.effect_secondary;
             effect_speed = proxy.effect_speed;
             wave_direction = proxy.wave_direction;
+            follow_screen = proxy.follow_screen;
         }
 
         // --- lighting -------------------------------------------------------
@@ -150,6 +152,11 @@ namespace Lucent {
         public async void apply_logo (bool active) throws Error {
             require ();
             yield proxy.apply_logo (active);
+        }
+
+        public async void apply_follow_screen (bool enabled) throws Error {
+            require ();
+            yield proxy.apply_follow_screen (enabled);
         }
 
         public async void apply_effect (Effect chosen, Mode mode, Gdk.RGBA first,

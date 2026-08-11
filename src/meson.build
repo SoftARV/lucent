@@ -87,6 +87,7 @@ daemon_sources = files(
   'daemon/daemon-service.vala',
   'daemon/sleep-monitor.vala',
   'daemon/power-source.vala',
+  'daemon/screen-monitor.vala',
 )
 
 executable('lucent-daemon',

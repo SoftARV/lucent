@@ -92,5 +92,18 @@
       <default>true</default>
       <summary>Whether the lid logo is lit</summary>
     </key>
+
+    <key name="lighting-follow-screen" type="b">
+      <default>true</default>
+      <summary>Turn the keyboard and lid logo off while the display sleeps</summary>
+      <description>
+        Tracks Mutter's PowerSaveMode, which is the panel, not the session
+        lock. Keying off the lock instead is what left the keyboard dark on a
+        lit lock screen under openrazer -- measured, the display comes back up
+        to twenty seconds before the lock is dismissed. The lid logo goes with
+        the keyboard, since a lit logo over a dark keyboard reads as a bug.
+        Off leaves both alone at all times.
+      </description>
+    </key>
   </schema>
 </schemalist>

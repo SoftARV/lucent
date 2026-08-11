@@ -13,7 +13,6 @@ depends=(
   'gtk4'
   'libadwaita'
   'glib2'
-  'openrazer-daemon'
 )
 makedepends=(
   'git'
@@ -22,10 +21,6 @@ makedepends=(
   'vala'
   'blueprint-compiler'
 )
-optdepends=(
-  'openrazer-driver-dkms: kernel driver the OpenRazer daemon needs for lighting'
-)
-
 provides=("$_pkgname")
 conflicts=("$_pkgname")
 install="$_pkgname.install"

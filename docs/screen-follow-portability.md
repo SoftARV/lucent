@@ -87,24 +87,49 @@ of two is not a blanked session.
 
 ## Stages
 
-**Stage 0 -- probe, before touching any daemon code.** A standalone client that
-binds `zwlr_output_power_manager_v1` and logs `mode` events across a real DPMS
-cycle, run both from a terminal and from a systemd user unit. It answers, on
-hardware, the four things the design assumes:
+**Stage 0 -- probe. DONE, measured.** `tools/wlr-power-probe/` binds
+`zwlr_output_power_manager_v1` and logs `mode` events across a real DPMS cycle.
+It never calls `set_mode`, so it cannot itself blank anything.
 
-- does a client with **no surface** receive `mode` events? The daemon has no window.
-- does the compositor broadcast when *another* client causes the change? The
-  blank here comes from Quickshell, not from us.
-- is the protocol restricted to privileged clients?
-- how does the daemon find the socket with no `WAYLAND_DISPLAY`?
+| Question | Answer | Evidence |
+|---|---|---|
+| Does a client with **no surface** get `mode` events? | **yes** | probe creates no surface; got `ON` on creation, `OFF` at t+6.01 s, `ON` at t+13.44 s |
+| Is the current state delivered on connect? | **yes** | first event per object is the state, the protocol's own `read_current()` |
+| Does a change **we did not cause** get reported? | **yes** | blank driven by Hyprland's dispatcher, not by the probe |
+| Does anything hold **exclusive** control? | **no** | no `failed` event across a full off/on cycle |
+| Can the socket be found with no `WAYLAND_DISPLAY`? | **yes** | scanning `$XDG_RUNTIME_DIR` found `wayland-1` and connected |
 
-The last one has two candidate fixes -- import the variable into the systemd
-user environment, or scan `$XDG_RUNTIME_DIR/wayland-*` and connect to what
-answers. Scanning is self-contained and survives a compositor restart, which
-importing does not; decide once the probe shows what a reconnect looks like.
+The panel really did blank -- `dpmsStatus` read 0 monitors on while off.
 
-Correct dispatch syntax for driving the cycle must be established first -- the
-0.56 Lua form, not `hyprctl dispatch dpms off`.
+**The environment finding is bigger than expected, and it decides the design.**
+`systemctl --user show-environment` *does* carry `WAYLAND_DISPLAY=wayland-1`,
+yet the running daemon's `/proc/<pid>/environ` does not. The timestamps say why:
+
+```
+02:50:18  lucent-daemon.service active
+02:50:19  Hyprland starts
+```
+
+The daemon is `WantedBy=default.target` and comes up a second *before* the
+compositor, and uwsm only finalizes `WAYLAND_DISPLAY` into the user manager's
+environment afterwards. Units started later inherit it; this one never does.
+
+So **scanning is not the tidier option, it is the only correct one** -- reading
+`WAYLAND_DISPLAY` would work when tested by hand and fail on every cold boot.
+That is the same shape as the hidraw ACL race already documented in CLAUDE.md,
+and it wants the same answer: retry rather than assume, and connect by
+discovery rather than by inherited state.
+
+Correct dispatch syntax under Hyprland 0.56's Lua config, for the record:
+`hyprctl dispatch 'hl.dsp.dpms({ action = "disable" })'`. The legacy
+`hyprctl dispatch dpms off` is silently rejected.
+
+**Still open from stage 0:** the blank here came from Hyprland's dispatcher.
+On Omarchy the production blank comes from `omarchy-shell` at
+`idle.screensaver`. If that client takes power control via `set_mode`, our
+object could in principle receive `failed` -- untested, because reaching it
+means idling for 150 s. Test it by lowering `idle.screensaver` temporarily
+before trusting the backend in production.
 
 **Stage 1 -- extract the interface.** Move the existing code into
 `MutterBackend` behind `ScreenBackend`, no behaviour change. Note the testing
@@ -131,7 +156,8 @@ it stays unsupported and honest about it.
 
 ## Open questions
 
-- Everything in stage 0.
+- The one item left open in stage 0: whether an `omarchy-shell` idle blank
+  takes exclusive power control and lands us a `failed` event.
 - X11 sessions have no push mechanism for DPMS that has been identified; if
   none exists, X11 stays unsupported rather than getting a poll.
 - Should the UI say why the toggle does nothing on an unsupported desktop? The

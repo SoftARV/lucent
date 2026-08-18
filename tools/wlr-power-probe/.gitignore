@@ -1,0 +1,4 @@
+probe
+probe.log
+wlr-output-power-management-unstable-v1-protocol.c
+wlr-output-power-management-unstable-v1-client-protocol.h

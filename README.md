@@ -72,11 +72,23 @@ sudo meson install -C build
 systemctl --user enable --now lucent-daemon
 ```
 
-Build needs Vala, Meson and `blueprint-compiler`; runtime needs GTK 4.10+ and libadwaita 1.4+.
+Build needs Vala, Meson, `blueprint-compiler` and `wayland-scanner` (from `wayland`); runtime needs
+GTK 4.10+ and libadwaita 1.4+.
 
 ```sh
-sudo pacman -S gtk4 libadwaita vala meson blueprint-compiler
+sudo pacman -S gtk4 libadwaita vala meson blueprint-compiler wayland
 ```
+
+Editors using clangd want a `compile_commands.json` at the top level. Meson writes one into the
+build directory, so link it:
+
+```sh
+ln -sf build/compile_commands.json compile_commands.json
+```
+
+Without it the daemon's C shim looks broken in the editor: the wlroots protocol header is generated
+into the build tree, so clangd cannot find it and reports every symbol from it as undeclared, while
+`meson compile` succeeds.
 
 Running from a build tree without installing is fine for the GUI, but the daemon needs its
 GSettings schema and the udev rule, neither of which a build tree provides:

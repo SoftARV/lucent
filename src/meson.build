@@ -88,15 +88,44 @@ daemon_sources = files(
   'daemon/sleep-monitor.vala',
   'daemon/power-source.vala',
   'daemon/screen-monitor.vala',
+  'daemon/screen-backend.vala',
+  'daemon/screen-mutter.vala',
+  'daemon/screen-wlr.vala',
+  'daemon/wlr-screen.vapi',
+  'daemon/wlr-screen.c',
+)
+
+# The wlroots backend talks a Wayland protocol, not D-Bus, so its bindings are
+# generated from the protocol description. The XML is vendored (MIT, Purism
+# SPC) because wlr-protocols is not installed everywhere this has to build.
+#
+# wayland-client is a small C library, not a toolkit -- linking it does not
+# breach the rule above, which is about GTK's resident cost.
+wayland_scanner = find_program('wayland-scanner')
+wlr_power_xml = files('daemon/wlr-output-power-management-unstable-v1.xml')
+
+wlr_power_header = custom_target('wlr-power-client-header',
+  input: wlr_power_xml,
+  output: 'wlr-output-power-management-unstable-v1-client-protocol.h',
+  command: [wayland_scanner, 'client-header', '@INPUT@', '@OUTPUT@'],
+)
+
+wlr_power_code = custom_target('wlr-power-private-code',
+  input: wlr_power_xml,
+  output: 'wlr-output-power-management-unstable-v1-protocol.c',
+  command: [wayland_scanner, 'private-code', '@INPUT@', '@OUTPUT@'],
 )
 
 executable('lucent-daemon',
   hid_sources, daemon_sources, config_vala,
+  wlr_power_header, wlr_power_code,
   dependencies: [
     dependency('glib-2.0', version: '>= 2.76'),
     dependency('gobject-2.0'),
     dependency('gio-2.0'),
+    dependency('wayland-client'),
     meson.get_compiler('vala').find_library('posix'),
   ],
+  include_directories: include_directories('daemon'),
   install: true,
 )

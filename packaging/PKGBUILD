@@ -13,6 +13,10 @@ depends=(
   'gtk4'
   'libadwaita'
   'glib2'
+  # libwayland-client, for the daemon's wlroots screen backend. The same
+  # package also carries wayland-scanner, which generates the protocol
+  # bindings at build time, so it is not repeated in makedepends.
+  'wayland'
 )
 makedepends=(
   'git'

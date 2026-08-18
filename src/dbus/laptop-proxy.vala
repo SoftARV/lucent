@@ -41,6 +41,7 @@ namespace Lucent {
         public abstract uint effect_speed { get; }
         public abstract uint wave_direction { get; }
         public abstract bool follow_screen { get; }
+        public abstract bool follow_screen_supported { get; }
 
         public abstract async void apply_power_mode (uint mode) throws Error;
         public abstract async void apply_power_mode_for (bool for_battery, uint mode) throws Error;

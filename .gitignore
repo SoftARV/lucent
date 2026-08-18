@@ -1,6 +1,10 @@
 /build/
 /_build/
 .cache/
+# Symlink to build/compile_commands.json, for clangd. The wlroots protocol
+# header is generated into the build dir, so without it an editor reports the
+# C shim as a wall of undeclared identifiers that meson compiles fine.
+/compile_commands.json
 CLAUDE.md
 
 __pycache__/

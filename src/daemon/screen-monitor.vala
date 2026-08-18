@@ -1,134 +1,70 @@
 namespace Lucent {
 
-    // Mutter publishes the panel's own power state, which is not the same thing
-    // as the session lock. Measured across three lock cycles: the display comes
-    // back 3.2 s, 19.9 s and 3.5 s before the lock is dismissed, while going the
-    // other way the two agree to within 0.42 s. Keying the backlight off
-    // org.gnome.ScreenSaver instead is exactly what left the keyboard dark on a
-    // lit lock screen under openrazer -- the divergence is one-directional,
-    // which is why the bug only ever showed on the way out.
+    // Picks a backend and republishes it, so the rest of the daemon asks one
+    // object whether the panel is lit and never learns which desktop it is on.
     //
-    // PowerSaveMode carries both edges on PropertiesChanged, verified against a
-    // 0.25 s poll running alongside, so this needs no timer of its own and the
-    // daemon keeps costing nothing while idle.
+    // Selection is by probing rather than by reading XDG_CURRENT_DESKTOP: the
+    // variable is set by whoever launched the session and describes intent, not
+    // what is actually running and answering. Backends are re-evaluated every
+    // time one of them changes presence, which is what already lets the Mutter
+    // path recover by itself when the shell restarts underneath the daemon.
     public class ScreenMonitor : Object {
-
-        private const string MUTTER = "org.gnome.Mutter.DisplayConfig";
-        private const string MUTTER_PATH = "/org/gnome/Mutter/DisplayConfig";
-
-        // 0 on, 1 standby, 2 suspend, 3 off. -1 means the compositor cannot
-        // say, which is not the same as blanked and must not darken anything.
-        private const int MODE_ON = 0;
-        private const int MODE_UNKNOWN = -1;
 
         public signal void changed ();
 
         public bool blanked { get; private set; default = false; }
 
-        // False on anything that is not GNOME, and before the shell owns the
-        // name. Nothing else publishes this, so elsewhere the feature simply
-        // stays off rather than falling back to the lock.
+        // False until some backend has something to talk to. Nothing consumes
+        // this yet; it is what a UI would need to explain a toggle that cannot
+        // do anything on this desktop.
         public bool present { get; private set; default = false; }
 
-        private DBusConnection? session_bus = null;
-        private uint subscription = 0;
-        private uint watch = 0;
+        private ScreenBackend[] backends;
 
         construct {
-            try {
-                session_bus = Bus.get_sync (BusType.SESSION);
-            } catch (Error e) {
-                warning ("no session bus, screen tracking is off: %s", e.message);
-                return;
+            // Mutter first: on GNOME it is the accurate answer, and GNOME does
+            // not implement the wlroots protocol anyway, so the two never both
+            // report present.
+            backends = { new MutterBackend (), new WlrBackend () };
+
+            foreach (var backend in backends) {
+                backend.changed.connect (reevaluate);
+                backend.notify["present"].connect (reevaluate);
             }
 
-            subscription = session_bus.signal_subscribe (
-                MUTTER,
-                "org.freedesktop.DBus.Properties",
-                "PropertiesChanged",
-                MUTTER_PATH,
-                null,
-                DBusSignalFlags.NONE,
-                (connection, sender, path, iface, name, parameters) => {
-                    string interface_name;
-                    Variant properties;
-                    Variant invalidated;
+            // Started only once every signal is wired, so nothing can fire
+            // into a half-built selector.
+            foreach (var backend in backends) {
+                backend.start ();
+            }
 
-                    parameters.get ("(s@a{sv}@as)",
-                                    out interface_name, out properties, out invalidated);
-
-                    if (interface_name != MUTTER) {
-                        return;
-                    }
-
-                    var value = properties.lookup_value ("PowerSaveMode", VariantType.INT32);
-                    if (value == null) {
-                        return;
-                    }
-
-                    update (value.get_int32 ());
-                });
-
-            // Presence comes from the name owner rather than from a failed
-            // read: the shell restarts underneath us, and this daemon can start
-            // before the shell owns the name at all.
-            watch = Bus.watch_name (
-                BusType.SESSION,
-                MUTTER,
-                BusNameWatcherFlags.NONE,
-                (connection, name, owner) => {
-                    present = true;
-                    read_current ();
-                },
-                (connection, name) => {
-                    present = false;
-
-                    // A compositor that went away is not a blanked panel.
-                    // Holding this true would strand the keyboard dark with
-                    // nothing left running to send the wake edge.
-                    update (MODE_ON);
-                });
+            reevaluate ();
         }
 
-        private void update (int mode) {
-            var now = mode != MODE_ON && mode != MODE_UNKNOWN;
+        private void reevaluate () {
+            ScreenBackend? active = null;
+
+            foreach (var backend in backends) {
+                if (backend.present) {
+                    active = backend;
+                    break;
+                }
+            }
+
+            if (active != null && !present) {
+                message ("following the screen via %s", active.label);
+            }
+
+            present = active != null;
+
+            // No backend means lit. This is the invariant the whole design
+            // rests on -- see ScreenBackend.
+            var now = active != null && active.blanked;
+
             if (now != blanked) {
                 blanked = now;
                 changed ();
             }
-        }
-
-        private void read_current () {
-            try {
-                var reply = session_bus.call_sync (
-                    MUTTER,
-                    MUTTER_PATH,
-                    "org.freedesktop.DBus.Properties",
-                    "Get",
-                    new Variant ("(ss)", MUTTER, "PowerSaveMode"),
-                    new VariantType ("(v)"),
-                    DBusCallFlags.NONE,
-                    -1,
-                    null);
-
-                Variant boxed;
-                reply.get ("(v)", out boxed);
-                update (boxed.get_int32 ());
-            } catch (Error e) {
-                warning ("cannot read PowerSaveMode: %s", e.message);
-            }
-        }
-
-        public override void dispose () {
-            if (subscription != 0 && session_bus != null) {
-                session_bus.signal_unsubscribe (subscription);
-                subscription = 0;
-            }
-            if (watch != 0) {
-                Bus.unwatch_name (watch);
-                watch = 0;
-            }
-            base.dispose ();
         }
     }
 }

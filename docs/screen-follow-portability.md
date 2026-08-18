@@ -174,10 +174,24 @@ protocol is that it pushes. It is useful as an **independent check when testing
 the backend**, which matters because otherwise the only witness to a blank is
 the same compositor being tested. Note the card number varies between machines.
 
-**Stage 1 -- extract the interface.** Move the existing code into
-`MutterBackend` behind `ScreenBackend`, no behaviour change. Note the testing
-gap honestly: **there is no GNOME on this machine**, so the Mutter path can
-only be verified by inspection here and needs a second machine or a nested
+**Stage 1 -- extract the interface. DONE.** `ScreenBackend` is an abstract
+class carrying the two invariants; `MutterBackend` holds the existing code
+moved verbatim; `ScreenMonitor` became a selector that probes backends and
+republishes the winner. `daemon-service.vala` is untouched -- the selector kept
+the old class name and the `changed`/`blanked` surface, so nothing downstream
+had to learn about backends.
+
+Selection probes rather than reading `XDG_CURRENT_DESKTOP`, which describes
+what launched the session rather than what is running and answering.
+
+Verified: builds with no new warnings (the two `will never be NULL` notices on
+`Bus.watch_name` lambdas moved file with the code -- 5 before, 5 after), daemon
+starts, opens the device, owns the bus name, and every property reads back
+unchanged.
+
+**The gap that remains is honest and unclosed: there is no GNOME on this
+machine.** The Mutter path was verified by inspection and by the code being
+moved byte-for-byte, not by running it. It needs a second machine or a nested
 session before release.
 
 **Stage 2 -- `WlrOutputPowerBackend`,** built on what stage 0 measured. Adds a

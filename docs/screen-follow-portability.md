@@ -194,11 +194,35 @@ machine.** The Mutter path was verified by inspection and by the code being
 moved byte-for-byte, not by running it. It needs a second machine or a nested
 session before release.
 
-**Stage 2 -- `WlrOutputPowerBackend`,** built on what stage 0 measured. Adds a
-`wayland-client` dependency to the daemon. Worth stating plainly: this is not
-the GTK rule being broken. `wayland-client` is a small C library, not a
-toolkit, and the reason `lucent-daemon` is a separate binary is resident cost.
-Measure RSS/PSS after, against the recorded 7.6 MB / 1.1 MB baseline.
+**Stage 2 -- `WlrBackend`. DONE, measured.** Built on
+`zwlr_output_power_manager_v1` through a small C shim (`wlr-screen.c`), rather
+than a hand-written VAPI over generated listener structs -- more fragile than
+the code it would have saved. Read-only: `set_mode` is never called.
+
+End to end on Hyprland 0.56.2, with the daemon driving a real cycle:
+
+```
+screen-monitor.vala:55: following the screen via wlr-output-power
+brightness before: 75
+BLANKED:           0
+WOKE:             75
+```
+
+**The resident cost is unchanged, which was the thing at risk.** `wayland-client`
+is a C library, not a toolkit, so the no-GTK rule is not breached -- but a new
+fd watch in a daemon whose measured idle CPU is a literal zero had to be
+checked rather than assumed:
+
+| | recorded baseline | with WlrBackend |
+|---|---|---|
+| RSS | 7.6 MB | 7.09 MB |
+| **PSS** | **1.1 MB** | **0.99 MB** |
+| Threads | 5 | 5 |
+| **Idle CPU, 180 s** | **0.000 s** | **0.000 s** |
+
+Zero ticks over 180 s with the backend connected and the fd watched. That is
+what the push requirement buys: an fd watch costs nothing while nothing
+happens, where a 0.25 s poll would not.
 
 **Stage 3 -- selection and failover,** plus the retest of all four existing
 guards on the new backend: an explicit `ApplyBrightness` during a blank cancels

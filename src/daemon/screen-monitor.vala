@@ -22,7 +22,10 @@ namespace Lucent {
         private ScreenBackend[] backends;
 
         construct {
-            backends = { new MutterBackend () };
+            // Mutter first: on GNOME it is the accurate answer, and GNOME does
+            // not implement the wlroots protocol anyway, so the two never both
+            // report present.
+            backends = { new MutterBackend (), new WlrBackend () };
 
             foreach (var backend in backends) {
                 backend.changed.connect (reevaluate);

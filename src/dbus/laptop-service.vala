@@ -41,6 +41,7 @@ namespace Lucent {
         public uint effect_speed { get; private set; default = 1; }
         public uint wave_direction { get; private set; default = 2; }
         public bool follow_screen { get; private set; default = true; }
+        public bool follow_screen_supported { get; private set; default = false; }
 
         private LaptopProxy? proxy = null;
 
@@ -114,6 +115,7 @@ namespace Lucent {
             effect_speed = proxy.effect_speed;
             wave_direction = proxy.wave_direction;
             follow_screen = proxy.follow_screen;
+            follow_screen_supported = proxy.follow_screen_supported;
         }
 
         // --- lighting -------------------------------------------------------

@@ -6,6 +6,16 @@ public class Lucent.LightingPage : Adw.PreferencesPage {
     [GtkChild] private unowned Gtk.Box quick;
     [GtkChild] private unowned Adw.SwitchRow logo_row;
     [GtkChild] private unowned Adw.SwitchRow follow_row;
+
+    private const string FOLLOW_SUBTITLE =
+        "Turn the keyboard and lid logo off while the display sleeps";
+
+    // Named rather than listed exhaustively: the backends are GNOME's Mutter
+    // and the wlroots protocol, which is what Hyprland, sway, river and
+    // Wayfire all speak.
+    private const string FOLLOW_UNSUPPORTED =
+        "Not available on this desktop — needs GNOME, or a wlroots "
+        + "compositor such as Hyprland or sway";
     [GtkChild] private unowned Gtk.FlowBox effects;
     [GtkChild] private unowned Adw.PreferencesGroup options;
     [GtkChild] private unowned Adw.ComboRow mode_row;
@@ -213,6 +223,15 @@ public class Lucent.LightingPage : Adw.PreferencesPage {
 
         follow_row.visible = true;
         follow_row.active = service.follow_screen;
+
+        // The switch keeps showing the stored preference, but goes insensitive
+        // where nothing can act on it, and says why. Leaving it live on an
+        // unsupported desktop is exactly the silence this feature exists to
+        // remove.
+        follow_row.sensitive = service.follow_screen_supported;
+        follow_row.subtitle = service.follow_screen_supported
+            ? FOLLOW_SUBTITLE
+            : FOLLOW_UNSUPPORTED;
 
         rebuild_models ();
 

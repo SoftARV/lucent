@@ -61,6 +61,10 @@ namespace Lucent {
         public uint wave_direction { get; private set; default = 2; }
         public bool follow_screen { get; private set; default = true; }
 
+        // Whether following the screen is possible here at all, as opposed to
+        // wanted. Read-only: it describes the desktop, not a preference.
+        public bool follow_screen_supported { get; private set; default = false; }
+
         private LaptopDevice? device;
         private Settings settings;
         private SleepMonitor sleep;
@@ -104,6 +108,16 @@ namespace Lucent {
             screen.changed.connect (() => {
                 sync_backlight ();
             });
+
+            // A desktop nobody has a backend for cannot be followed, and the
+            // toggle must say so rather than sitting there doing nothing --
+            // which is the shape of the original bug, not a fix for it.
+            // Assigned after connecting, because a backend can become present
+            // synchronously while ScreenMonitor is still being constructed.
+            screen.notify["present"].connect (() => {
+                follow_screen_supported = screen.present;
+            });
+            follow_screen_supported = screen.present;
 
             sync_profiles ();
             acquire (0);

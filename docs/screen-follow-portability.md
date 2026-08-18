@@ -249,6 +249,37 @@ daemon should report lit rather than dark, and that is exercised only by
 killing Hyprland, which takes the session with it. It is inspected, not
 measured.
 
+## The toggle now says when it cannot work
+
+The original bug was a switch that read `true` and did nothing. Shipping a
+second desktop where that is still possible would reproduce it, so the daemon
+publishes whether following the screen is possible *here*, separately from
+whether it is wanted:
+
+| property | means |
+|---|---|
+| `FollowScreen` | the stored preference |
+| `FollowScreenSupported` | some backend is actually present |
+
+`ScreenMonitor.present` already knew; it simply told nobody. It is read-only,
+notifies on change, and is republished by `LaptopService` like everything else,
+so a compositor appearing after the daemon fills the control in by itself.
+
+The switch keeps showing the stored preference and goes insensitive, with a
+subtitle naming what would be needed. It is not forced off: the preference is
+the user's and is left alone, because the desktop can change under it.
+
+Measured both ways, with the daemon starved of any Wayland socket to simulate
+an unsupported desktop:
+
+| | backend chosen | `FollowScreenSupported` | `FollowScreen` |
+|---|---|---|---|
+| Hyprland | `wlr-output-power` | true | true |
+| no compositor reachable | none | **false** | true, untouched |
+
+Confirmed in the UI rather than inferred from the property: screenshots of both
+states show the row dimmed and re-subtitled in the second.
+
 **Stage 4 -- KWin,** unresearched. `org.kde.Solid.PowerManagement` and an
 `org_kde_kwin_dpms` protocol both surfaced in searching and neither is verified.
 KWin does not implement the wlroots protocol, so Plasma needs its own backend or

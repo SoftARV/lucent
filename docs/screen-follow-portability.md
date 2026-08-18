@@ -131,6 +131,49 @@ object could in principle receive `failed` -- untested, because reaching it
 means idling for 150 s. Test it by lowering `idle.screensaver` temporarily
 before trusting the backend in production.
 
+## The backlight sysfs is not an instrument, and here is why
+
+Recorded because it was used as corroborating evidence once and should not be
+again. On this panel (`amdgpu_bl2`, `scale = non-linear`, max 400000):
+
+| | `brightness` | `actual_brightness` | `bl_power` | drm `dpms` |
+|---|---|---|---|---|
+| lit | 240000 | 166859 | 0 | On |
+| **blanked** | 240000 | **240000** | 0 | **Off** |
+| woken | 240000 | 166859 | 0 | On |
+
+`actual_brightness` goes **up** when the panel goes dark, and it lands exactly
+on the stored `brightness`. Blanking at 240000 rather than the 160000 used
+earlier is what makes that falsifiable: it reads 240000, not a constant.
+
+So the two values are in different domains. `brightness` is the perceptual
+scale the class device advertises; `actual_brightness` reads the hardware PWM
+while the display is on, and falls back to returning the stored perceptual
+value when the display is off and the hardware cannot be read. The mapping
+between them is deterministic and content-independent -- not adaptive
+backlight, which was the first guess:
+
+| set | 40000 | 120000 | 160000 | 280000 | 400000 |
+|---|---|---|---|---|---|
+| actual | 5694 | 49506 | 83929 | 220059 | 389047 |
+| ratio | 0.142 | 0.413 | 0.525 | 0.786 | 0.973 |
+
+`bl_power` stays 0 throughout, so DPMS off does not route through the backlight
+class device at all -- the display is disabled at the connector.
+
+**The valid sysfs instrument is the DRM connector**, which tracked the blank
+exactly on both edges:
+
+```sh
+cat /sys/class/drm/card2-eDP-2/dpms      # On / Off
+cat /sys/class/drm/card2-eDP-2/enabled   # enabled / disabled
+```
+
+It is poll-only, so it is no use as a backend -- the whole point of the wlr
+protocol is that it pushes. It is useful as an **independent check when testing
+the backend**, which matters because otherwise the only witness to a blank is
+the same compositor being tested. Note the card number varies between machines.
+
 **Stage 1 -- extract the interface.** Move the existing code into
 `MutterBackend` behind `ScreenBackend`, no behaviour change. Note the testing
 gap honestly: **there is no GNOME on this machine**, so the Mutter path can

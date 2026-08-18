@@ -224,11 +224,30 @@ Zero ticks over 180 s with the backend connected and the fd watched. That is
 what the push requirement buys: an fd watch costs nothing while nothing
 happens, where a 0.25 s poll would not.
 
-**Stage 3 -- selection and failover,** plus the retest of all four existing
-guards on the new backend: an explicit `ApplyBrightness` during a blank cancels
-that restore; brightness and logo restore on separate flags; a second blank
-does not overwrite saved values; turning the toggle off while dark hands both
-back.
+**Stage 3 -- the guards, re-measured. DONE.** Nothing in
+`daemon-service.vala` is backend-specific, but the *delivery* is: the wlr
+backend publishes from a Wayland fd rather than a D-Bus signal, so the four
+save-and-restore guards were re-run rather than assumed to carry over.
+`tools/follow-screen-guards.sh`, 12 checks, all passing against
+`wlr-output-power`:
+
+| Guard | Result |
+|---|---|
+| an explicit `ApplyBrightness` during a blank cancels *that* restore | wake kept the deliberate 40, not the saved 75 |
+| brightness and logo on separate flags | setting brightness while dark left the logo restored, not stranded off |
+| a second blank does not overwrite the saved values with our own dark ones | restored 75, not the 0 we wrote |
+| the toggle off while dark hands both straight back | both returned while the panel was still dark |
+
+One thing the run surfaced about the third guard. **A repeated OFF edge is
+unreachable through DPMS alone**, because `ScreenBackend.publish` swallows a
+change that is not a change -- so the structural protection sits a layer above
+the flags. The test reaches the blanked branch the only other way a client can,
+by asking to follow the screen while already dark.
+
+**Still not covered:** the failover path. A compositor vanishing under the
+daemon should report lit rather than dark, and that is exercised only by
+killing Hyprland, which takes the session with it. It is inspected, not
+measured.
 
 **Stage 4 -- KWin,** unresearched. `org.kde.Solid.PowerManagement` and an
 `org_kde_kwin_dpms` protocol both surfaced in searching and neither is verified.
